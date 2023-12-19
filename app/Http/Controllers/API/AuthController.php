@@ -23,22 +23,23 @@ function str_random($length = 10) {
 class AuthController extends Controller
 {
     public function __construct(){
-        $this->middleware('auth:sancum',['except'=> ['login','register']]);
+        $this->middleware('ThrottleRequestsByIP:100,1');
+        $this->middleware( ['expired','auth:sanctum'] , ['except' => ['login', 'register']]);
     }
         
     public function login(Request $request){
         $request->validate([
             'name' => 'required|string',
-            'password' => 'required|string',
-            'email' => 'required|string|email'
+            'password' => 'required|string'
         ]);
         $credentials = $request->only('name', 'password');
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
+            Auth::user()->tokens()->delete();
             return response()->json([
                 'user' => $user,
                 'authorization' => [
-                    'token' => $user->createToken('ApiToken')->plainTextToken,
+                    'token' => $user->createToken('ApiToken',['expires' => now()->addMinutes(60)])->plainTextToken,
                     'type' => 'bearer',
                 ]
             ]);
@@ -59,15 +60,17 @@ class AuthController extends Controller
         $data = [
             'name' => $request->name,
             'password' => Hash::make($request->password),
-            'email' => $request->email,
-            'confirmation_code' => str_random(10)
+            'email' => $request->email
+             //'confirmation_code' => str_random(10)
         ];
         
         $user = User::create($data);
-
+        
+        /*
         Mail::send('emails.confirmation_code',$data, function($message) use ($data) {
             $message->to($data['email'], $data['name'])->subject('Por favor confirma tu correo');
         });
+        */        
         
         return response()->json([
             'message' => 'User created successfully',
