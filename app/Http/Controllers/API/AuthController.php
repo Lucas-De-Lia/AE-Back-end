@@ -16,7 +16,7 @@ class AuthController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('ThrottleRequestsByIP:100,1');
+        $this->middleware('throttle:api');
         $this->middleware(['auth:sanctum'], ['except' => ['login', 'register']]);
     }
 
@@ -31,7 +31,7 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
-
+            $user->tokens()->delete();
             $token = $user->createToken('token-name')->plainTextToken;
             return response()->json([
                 'user' => [
@@ -41,7 +41,8 @@ class AuthController extends Controller
                 ],
                 'authorization' => [
                     'token' => $token,
-                    'type' => 'bearer',
+                    'type' => 'Bearer ',
+                    'X-CSRF-TOKEN' => csrf_token()
                 ]
             ]);
         }

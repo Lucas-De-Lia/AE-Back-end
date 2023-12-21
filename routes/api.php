@@ -13,5 +13,5 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::prefix('ae')->group(function () {
-    Route::get('aedates', [AeController::class, 'getAeDates']);
+    Route::post('aedates', [AeController::class, 'getaedates']);
 });

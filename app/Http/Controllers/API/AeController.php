@@ -11,7 +11,7 @@ class AeController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['ThrottleRequestsByIP:100,1', 'auth']);
+        $this->middleware(['throttle:api', 'auth']);
     }
 
     private function getDates()
@@ -38,9 +38,22 @@ class AeController extends Controller
     {
         if (Auth::check()) {
             // Usuario autenticado, obtén sus datoss
-            $user = Auth::user();
+            //$user = Auth::user();
             //TODO CONSULTAR API
             return response()->json($this->getDates());
+        }
+    }
+    public function getaeuserdata(Request $request)
+    {
+        if (Auth::check()) {
+            $user = Auth::user();
+            return response()->json([
+                'user' => [
+                    'name' => decrypt($user->name),
+                    'email' => decrypt($user->email),
+                    'cuil' => $user->cuil
+                ],
+            ]);
         }
     }
 }
