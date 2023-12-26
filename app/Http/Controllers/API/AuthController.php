@@ -5,7 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-
+use App\Mail\ConfirmationCode;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
@@ -35,8 +35,8 @@ class AuthController extends Controller
             $token = $user->createToken('token-name')->plainTextToken;
             return response()->json([
                 'user' => [
-                    'name' => decrypt($user->name),
-                    'email' => decrypt($user->email),
+                    'name' => $user->name,
+                    'email' => $user->email,
                     'cuil' => $user->cuil
                 ],
                 'authorization' => [
@@ -45,6 +45,8 @@ class AuthController extends Controller
                     'X-CSRF-TOKEN' => csrf_token()
                 ]
             ]);
+
+            Mail::to($user->email)->send(new ConfirmationCode("1231"));
         }
 
         return response()->json([
@@ -67,20 +69,19 @@ class AuthController extends Controller
         ]);
 
         $data = [
-            'name' => encrypt($request->name),
+            'name' => $request->name,
             'cuil' => $request->cuil,
             'password' => Hash::make($request->password),
-            'email' => encrypt($request->email),
+            'email' => $request->email,
             'confirmation_code' => AuthController::str_random(10)
         ];
 
         $user = User::create($data);
 
-        /*
-        Mail::send('emails.confirmation_code',$data, function($message) use ($data) {
+        Mail::send('emails.confirmation_code', $data, function ($message) use ($data) {
             $message->to($data['email'], $data['name'])->subject('Por favor confirma tu correo');
         });
-        */
+
 
         return response()->json([
             'message' => 'User created successfully',

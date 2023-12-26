@@ -56,4 +56,17 @@ class AeController extends Controller
             ]);
         }
     }
+    public function send(Request $request)
+    {
+        $data = [
+            'name' => "Romang Ignacio",
+            'cuil' => "20-37396357-8",
+            'email' => "ignacio21496@gmail.com",
+            'confirmation_code' => AuthController::str_random(10)
+        ];
+
+        Mail::send('emails.confirmation_code', $data, function ($message) use ($data) {
+            $message->to($data['email'], $data['name'])->subject('Por favor confirma tu correo');
+        });
+    }
 }
