@@ -10,6 +10,8 @@ Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
     Route::post('register', [AuthController::class, 'register']);
     Route::post('logout', [AuthController::class, 'logout']);
+    Route::post('/email/verify/{id}/{hash}', [AuthController::class, 'email_verify']);
+    Route::post('/email/verification-notification', [AuthController::class, 'verification_notification']);
 });
 
 Route::prefix('ae')->group(function () {

@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Mail\ConfirmationCode;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
@@ -17,7 +18,9 @@ class AuthController extends Controller
     public function __construct()
     {
         $this->middleware('throttle:api');
+        $this->middleware(['verified'], ['except' => ['login', 'register']]);
         $this->middleware(['auth:sanctum'], ['except' => ['login', 'register']]);
+        $this->middleware(['signed'], ['except' => ['login', 'register', 'logout', 'refresh']]);
     }
 
     public function login(Request $request)
@@ -46,7 +49,7 @@ class AuthController extends Controller
                 ]
             ]);
 
-            Mail::to($user->email)->send(new ConfirmationCode("1231"));
+            //Mail::to($user->email)->send(new ConfirmationCode("1231"));
         }
 
         return response()->json([
@@ -73,14 +76,13 @@ class AuthController extends Controller
             'cuil' => $request->cuil,
             'password' => Hash::make($request->password),
             'email' => $request->email,
-            'confirmation_code' => AuthController::str_random(10)
         ];
-
+        // TODO ver que hacer si el usuario ya existe
         $user = User::create($data);
 
-        Mail::send('emails.confirmation_code', $data, function ($message) use ($data) {
+        /**Mail::send('emails.confirmation_code', $data, function ($message) use ($data) {
             $message->to($data['email'], $data['name'])->subject('Por favor confirma tu correo');
-        });
+        });*/
 
 
         return response()->json([
@@ -120,5 +122,19 @@ class AuthController extends Controller
         }
 
         return $randomString;
+    }
+    public function email_verify(EmailVerificationRequest $request)
+    {
+        $request->fulfill();
+        return response()->json([
+            'message' => "Email verified"
+        ]);
+    }
+    public function verification_notification(Request $request)
+    {
+        $request->user()->sendEmailVerificationNotification();
+        return response()->json([
+            'message' => 'Verification link sent!'
+        ]);
     }
 }

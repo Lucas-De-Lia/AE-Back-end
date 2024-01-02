@@ -11,12 +11,12 @@ class AeController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['throttle:api', 'auth:sanctum']);
+        $this->middleware(['throttle:api', 'auth:sanctum', 'verified']);
     }
 
     private function getDates()
     {
-        $startDay = new DateTime();
+        $startDay = new DateTime("1/1/2024");
         $fifthMonth = new DateTime($startDay->format('Y-m-d'));
         $sixthMonth = new DateTime($startDay->format('Y-m-d'));
         $lastMonth = new DateTime($startDay->format('Y-m-d'));
