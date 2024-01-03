@@ -4,7 +4,7 @@ use App\Http\Controllers\API\AeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
-use App\Http\Controllers\API\PdfController;
+use App\Http\Controllers\API\GuestController;
 
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
@@ -24,7 +24,9 @@ Route::prefix('ae')->group(function () {
 });
 
 Route::prefix('pdf')->group(function () {
-    Route::post('getpdf', [PdfController::class, 'getPdf']);
-    Route::post('getpdflist', [PdfController::class, 'getPdfList']);
-    Route::post('publishpdf', [PdfController::class, 'publishPDF']);
+    Route::post('getpdf', [GuestController::class, 'getPdf']);
+    Route::post('getpdflist', [GuestController::class, 'getPdfList']);
+    Route::post('publishpdf', [GuestController::class, 'publishPDF']);
+
+    Route::post('getQuestions', [GuestController::class, 'getQuestions']);
 });

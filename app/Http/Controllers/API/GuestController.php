@@ -5,8 +5,9 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\PdfDocument;
+use App\Models\Question;
 
-class PdfController extends Controller
+class GuestController extends Controller
 {
     public function __construct()
     {
@@ -76,5 +77,10 @@ class PdfController extends Controller
             'id' => $pdf->id,
             'msg' => 'Pdf saved',
         ]);
+    }
+
+    function getQuestions(Request $request)
+    {
+        return response()->json(['questions'  => Question::all()]);
     }
 }
