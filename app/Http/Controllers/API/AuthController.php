@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Mail\ConfirmationCode;
+use App\Models\Question;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Support\Facades\Auth;
@@ -39,6 +40,11 @@ class AuthController extends Controller
             $user = Auth::user();
             $user->tokens()->delete();
             $token = $user->createToken('token-name')->plainTextToken;
+            Question::create([
+                'question' => '¿Cómo estás?',
+                'answers' => ['hola', 'hola'],
+            ]);
+
             return response()->json([
                 'user' => [
                     'name' => $user->name,
@@ -54,6 +60,7 @@ class AuthController extends Controller
 
             //Mail::to($user->email)->send(new ConfirmationCode("1231"));
         }
+
 
         return response()->json([
             'message' => 'Invalid credentials',

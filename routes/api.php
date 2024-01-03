@@ -23,10 +23,10 @@ Route::prefix('ae')->group(function () {
     Route::post('send', [AeController::class, 'send']);
 });
 
-Route::prefix('pdf')->group(function () {
+Route::prefix('resources')->group(function () {
     Route::post('getpdf', [GuestController::class, 'getPdf']);
     Route::post('getpdflist', [GuestController::class, 'getPdfList']);
     Route::post('publishpdf', [GuestController::class, 'publishPDF']);
 
-    Route::post('getQuestions', [GuestController::class, 'getQuestions']);
+    Route::post('getQuestions', [GuestController::class, 'getQuestionList']);
 });

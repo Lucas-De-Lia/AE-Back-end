@@ -79,8 +79,27 @@ class GuestController extends Controller
         ]);
     }
 
-    function getQuestions(Request $request)
+    public function getQuestionList(Request $request)
     {
-        return response()->json(['questions'  => Question::all()]);
+        $questions = Question::all();
+
+        // Verificar si se encontraron preguntas
+        if ($questions->count() > 0) {
+            $questionList = [];
+
+            foreach ($questions as $question) {
+                $questionList[] = [
+                    'id' => $question->id,
+                    'question' => $question->question,
+                    'answers' => $question->answers,
+                ];
+            }
+
+            return response()->json($questionList);
+        } else {
+            return response()->json([
+                'message' => 'No questions found',
+            ], 404);
+        }
     }
 }

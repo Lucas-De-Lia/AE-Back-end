@@ -11,6 +11,6 @@ class Question extends Model
     protected $fillable = ['question', 'answers'];
 
     protected $casts = [
-        'text' => 'array'
+        'answers' => 'array'
     ];
 }
