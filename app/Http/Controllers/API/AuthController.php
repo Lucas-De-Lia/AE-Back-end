@@ -212,6 +212,8 @@ class AuthController extends Controller
             ]);
 
             $user->save();
+            //cierro session
+
             Auth::user()->tokens()->delete();
             return response()->json(['status' => 'Password changed successfully']);
         }
