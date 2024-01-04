@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 
 use function Egulias\EmailValidator\Validation\withError;
 
@@ -24,7 +25,7 @@ class AuthController extends Controller
         $this->middleware('throttle:api');
         $this->middleware(['verified'], ['except' => ['login', 'register']]);
         $this->middleware(['auth:sanctum'], ['except' => ['login', 'register']]);
-        $this->middleware(['signed'], ['except' => ['login', 'register', 'logout', 'refresh']]);
+        //$this->middleware(['signed'], ['except' => ['login', 'register', 'logout', 'refresh']]);
     }
 
     public function login(Request $request)
@@ -40,10 +41,6 @@ class AuthController extends Controller
             $user = Auth::user();
             $user->tokens()->delete();
             $token = $user->createToken('token-name')->plainTextToken;
-            Question::create([
-                'question' => '¿Cómo estás?',
-                'answers' => ['hola', 'hola'],
-            ]);
 
             return response()->json([
                 'user' => [
@@ -57,8 +54,6 @@ class AuthController extends Controller
                     'X-CSRF-TOKEN' => csrf_token()
                 ]
             ]);
-
-            //Mail::to($user->email)->send(new ConfirmationCode("1231"));
         }
 
 
@@ -133,6 +128,31 @@ class AuthController extends Controller
 
         return $randomString;
     }
+
+    //verify 2
+    public function email_send_code(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+        $code = AuthController::str_random(6);
+        Session::put('verifycode', $code);
+        Mail::to($request->email)->send(new ConfirmationCode($code));
+        return response()->json(["msg" => 'code send']);
+    }
+    public function verify_code_email(Request $request)
+    {
+        $request->validate(['code' => 'required|regex:/^[a-zA-Z0-9]{6}$/']);
+        $code = $request->code;
+        $realcode = Session::get('verifycode', '');
+        if ($code == $realcode) {
+            return response()->json(['msg' => 'Código válido']);
+        } else {
+            return response()->json(['msg' => 'Código no válido']);
+        }
+        Session::forget('verifycode');
+    }
+
+
+    //verify 1
     public function email_verify(EmailVerificationRequest $request)
     {
         $request->fulfill();
@@ -147,6 +167,8 @@ class AuthController extends Controller
             'message' => 'Verification link sent!'
         ]);
     }
+
+
 
     public function forgot_password(Request $request)
     {
@@ -172,5 +194,27 @@ class AuthController extends Controller
         );
 
         return $status === Password::PASSWORD_RESET ? response()->json(['status' => __($status)]) : response()->json(['status' => 'Password reset error']);
+    }
+
+    public function change_password(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|min:8|different:current_password|confirmed',
+        ]);
+        if (Auth::check()) {
+            $user = Auth::user();
+            if (!Hash::check($request->input('current_password'), $user->password)) {
+                return response()->json(['status' => 'Current password is incorrect'], 401);
+            }
+            $user->forceFill([
+                'password' => Hash::make($request->input('new_password')),
+            ]);
+
+            $user->save();
+            Auth::user()->tokens()->delete();
+            return response()->json(['status' => 'Password changed successfully']);
+        }
+        return response()->json(['status' => 'Auth check error'], 401);
     }
 }

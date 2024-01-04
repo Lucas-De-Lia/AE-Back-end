@@ -39,7 +39,7 @@ class ConfirmationCode extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'confirmation_code.blade',
+            view: 'emails.verify',
             with: ['confirmation_code' => $this->code],
         );
     }
