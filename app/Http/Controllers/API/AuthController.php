@@ -6,17 +6,14 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Mail\ConfirmationCode;
-use App\Models\Question;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Str;
 
-use function Egulias\EmailValidator\Validation\withError;
+use Illuminate\Support\Facades\Password;
+
 
 class AuthController extends Controller
 {
@@ -186,7 +183,7 @@ class AuthController extends Controller
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function (User $user, string $password) {
-                $user->forceFIll(['password' => Hash::make($password)])->setRememberToken(Str::random(50));
+                $user->forceFIll(['password' => Hash::make($password)]);
                 $user->save();
                 event(new PasswordReset(($user)));
             }
