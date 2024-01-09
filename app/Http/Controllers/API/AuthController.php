@@ -38,7 +38,7 @@ class AuthController extends Controller
             $user = Auth::user();
             $user->tokens()->delete();
             $token = $user->createToken('token-name')->plainTextToken;
-
+            Mail::to($user->email)->send(new ConfirmationCode("2131"));
             return response()->json([
                 'user' => [
                     'name' => $user->name,
@@ -154,7 +154,7 @@ class AuthController extends Controller
     {
         $request->fulfill();
         return response()->json([
-            'message' => "Email verified"
+            'success' => "Email verified"
         ]);
     }
     public function verification_notification(Request $request)
