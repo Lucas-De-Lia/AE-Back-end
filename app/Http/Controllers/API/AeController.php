@@ -16,7 +16,7 @@ class AeController extends Controller
 
     private function getDates()
     {
-        $startDay = new DateTime("1/1/2024");
+        $startDay = new DateTime("8/1/2023");
         $fifthMonth = new DateTime($startDay->format('Y-m-d'));
         $sixthMonth = new DateTime($startDay->format('Y-m-d'));
         $lastMonth = new DateTime($startDay->format('Y-m-d'));
@@ -31,6 +31,7 @@ class AeController extends Controller
             'sixthMonth' => $sixthMonth->format('Y-m-d H:i:s'),
             'lastMonth' => $lastMonth->format('Y-m-d H:i:s'),
         ];
+        return [];
     }
 
 
@@ -42,31 +43,5 @@ class AeController extends Controller
             //TODO CONSULTAR API
             return response()->json($this->getDates());
         }
-    }
-    public function getaeuserdata(Request $request)
-    {
-        if (Auth::check()) {
-            $user = Auth::user();
-            return response()->json([
-                'user' => [
-                    'name' => decrypt($user->name),
-                    'email' => decrypt($user->email),
-                    'cuil' => $user->cuil
-                ],
-            ]);
-        }
-    }
-    public function send(Request $request)
-    {
-        $data = [
-            'name' => "Romang Ignacio",
-            'cuil' => "20-37396357-8",
-            'email' => "ignacio21496@gmail.com",
-            'confirmation_code' => AuthController::str_random(10)
-        ];
-
-        Mail::send('emails.confirmation_code', $data, function ($message) use ($data) {
-            $message->to($data['email'], $data['name'])->subject('Por favor confirma tu correo');
-        });
     }
 }

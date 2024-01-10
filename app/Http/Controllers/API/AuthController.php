@@ -38,7 +38,7 @@ class AuthController extends Controller
             $user = Auth::user();
             $user->tokens()->delete();
             $token = $user->createToken('token-name')->plainTextToken;
-            Mail::to($user->email)->send(new ConfirmationCode("2131", "name"));
+            //Mail::to($user->email)->send(new ConfirmationCode("2131", "name"));
             return response()->json([
                 'user' => [
                     'name' => $user->name,

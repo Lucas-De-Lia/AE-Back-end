@@ -24,7 +24,6 @@ Route::prefix('auth')->group(function () {
 
 Route::prefix('ae')->group(function () {
     Route::post('aedates', [AeController::class, 'getaedates']);
-    Route::post('send', [AeController::class, 'send']);
 });
 
 Route::prefix('resources')->group(function () {
