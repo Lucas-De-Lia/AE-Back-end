@@ -12,3 +12,7 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+
+Route::get('/', function () {
+    return view('emails.verify')->with('confirmation_code', "251321")->with('name', "Ignacio Romang");
+});

@@ -18,9 +18,10 @@ class ConfirmationCode extends Mailable
     /**
      * Create a new message instance.
      */
-    public function __construct(string $code)
+    public function __construct(string $code, string $name)
     {
         $this->code = $code;
+        $this->name = $name;
     }
 
     /**
@@ -29,7 +30,7 @@ class ConfirmationCode extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Confirmation Code',
+            subject: 'Email de Verificación',
         );
     }
 
@@ -40,7 +41,7 @@ class ConfirmationCode extends Mailable
     {
         return new Content(
             view: 'emails.verify',
-            with: ['confirmation_code' => $this->code],
+            with: ['confirmation_code' => $this->code, 'name' => $this->name],
         );
     }
 
