@@ -11,8 +11,10 @@ use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
-
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Auth\Events\Verified;
+
 
 
 class AuthController extends Controller
@@ -20,7 +22,7 @@ class AuthController extends Controller
     public function __construct()
     {
         $this->middleware('throttle:api');
-        $this->middleware(['verified'], ['except' => ['login', 'register']]);
+        $this->middleware(['verified'], ['except' => ['login', 'register','email_send_code','verify_code_email']]);
         $this->middleware(['auth:sanctum'], ['except' => ['login', 'register']]);
         //$this->middleware(['signed'], ['except' => ['login', 'register', 'logout', 'refresh']]);
     }
@@ -52,8 +54,6 @@ class AuthController extends Controller
                 ]
             ]);
         }
-
-
         return response()->json([
             'message' => 'Invalid credentials',
         ], 401);
@@ -116,7 +116,7 @@ class AuthController extends Controller
 
     static private function str_random($length = 10)
     {
-        $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         $randomString = '';
 
         for ($i = 0; $i < $length; $i++) {
@@ -129,23 +129,53 @@ class AuthController extends Controller
     //verify 2
     public function email_send_code(Request $request)
     {
-        $request->validate(['email' => 'required|email']);
-        $code = AuthController::str_random(6);
-        Session::put('verifycode', $code);
-        Mail::to($request->email)->send(new ConfirmationCode($code));
-        return response()->json(["msg" => 'code send']);
+        $request->validate([
+            'email' =>'required|string|email|max:255',
+            'password' => 'required|string'
+        ]);
+        if(Auth::check()){
+            $user = Auth::user();
+            if(Hash::check($request->input('password'), $user->password)){
+                $code = self::str_random(6);
+                $user->verify_code = $code;
+                $user->save();
+                Mail::to($request->email)->send(new ConfirmationCode($code, $user->name));
+                return response()->json([
+                'message' => 'Email sent',
+                ]);
+            }
+        }
+        return response()->json(["message" => 'Unauthenticated']);
     }
     public function verify_code_email(Request $request)
     {
-        $request->validate(['code' => 'required|regex:/^[a-zA-Z0-9]{6}$/']);
-        $code = $request->code;
-        $realcode = Session::get('verifycode', '');
-        if ($code == $realcode) {
-            return response()->json(['msg' => 'Código válido']);
+    $request->validate(['code' => 'required|regex:/^[A-Z0-9]{6}$/', 'email' => 'required|string|email|max:255']);
+    $code = $request->code;
+
+    if(Auth::check()){
+        $user = Auth::user();
+        
+        if ($code == $user->verify_code) {
+
+            if ($request->user()->hasVerifiedEmail()) {
+                return response()->json(['message' => 'Código no válido']);
+            }
+
+            if ($request->user()->markEmailAsVerified()) {
+                $user->verify_code = null;
+                $user->email = $request->email;
+                $user->save();
+                event(new Verified($request->user()));
+                return response()->json(['message' => 'Código válido']);
+            }
         } else {
-            return response()->json(['msg' => 'Código no válido']);
+            return response()->json(['message' => 'Código no válido']);
         }
-        Session::forget('verifycode');
+    } else {
+        // Agrega aquí el manejo cuando el usuario no está autenticado, si es necesario
+        return response()->json(['message' => 'Usuario no autenticado']);
+    }
+
     }
 
 
