@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Mail\ConfirmationCode;
+use App\Models\EmailToVerify;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +15,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Auth\Events\Verified;
-
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Validator;
 
 
 class AuthController extends Controller
@@ -22,7 +24,7 @@ class AuthController extends Controller
     public function __construct()
     {
         $this->middleware('throttle:api');
-        $this->middleware(['verified'], ['except' => ['login', 'register','email_send_code','verify_code_email']]);
+        $this->middleware(['verified'], ['except' => ['login', 'register', 'email_send_code', 'verify_code_email']]);
         $this->middleware(['auth:sanctum'], ['except' => ['login', 'register']]);
         //$this->middleware(['signed'], ['except' => ['login', 'register', 'logout', 'refresh']]);
     }
@@ -52,16 +54,17 @@ class AuthController extends Controller
                     'type' => 'Bearer ',
                     'X-CSRF-TOKEN' => csrf_token()
                 ]
-            ]);
+            ], Response::HTTP_CREATED);
         }
         return response()->json([
             'message' => 'Invalid credentials',
-        ], 401);
+        ], Response::HTTP_UNAUTHORIZED);
     }
 
     public function register(Request $request)
     {
-        $request->validate([
+
+        $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:users',
             'cuil' => [
                 'required',
@@ -73,45 +76,58 @@ class AuthController extends Controller
             'email' => 'required|string|email|max:255|unique:users'
         ]);
 
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], Response::HTTP_BAD_REQUEST);
+        }
+
         $data = [
             'name' => $request->name,
             'cuil' => $request->cuil,
             'password' => Hash::make($request->password),
             'email' => $request->email,
         ];
-        // TODO ver que hacer si el usuario ya existe
+
         $user = User::create($data);
-
-        /**Mail::send('emails.confirmation_code', $data, function ($message) use ($data) {
-            $message->to($data['email'], $data['name'])->subject('Por favor confirma tu correo');
-        });*/
-
-
         return response()->json([
             'message' => 'User created successfully',
             'user' => $user
-        ]);
+        ], Response::HTTP_CREATED);
     }
 
     public function logout()
     {
         if (Auth::check()) {
+            Auth::logout();
             Auth::user()->tokens()->delete();
+
             return response()->json([
                 'message' => 'Successfully logged out',
-            ]);
+            ], Response::HTTP_OK);
         }
+        return response()->json([
+            'message' => 'Unauthenticated',
+        ], Response::HTTP_UNAUTHORIZED);
     }
+
 
     public function refresh()
     {
+        // Sin uso actualmente
+        if (Auth::check()) {
+            $user = Auth::user();
+
+            return response()->json([
+                'user' => $user,
+                'authorization' => [
+                    'token' => Auth::refresh(),
+                    'type' => 'bearer',
+                    'expires_in' => Auth::factory()->getTTL() * 60, // Tiempo de expiración del nuevo token en segundos
+                ],
+            ], Response::HTTP_CREATED);
+        }
         return response()->json([
-            'user' => Auth::user(),
-            'authorisation' => [
-                'token' => Auth::refresh(),
-                'type' => 'bearer',
-            ]
-        ]);
+            'message' => 'Unauthenticated',
+        ], Response::HTTP_UNAUTHORIZED);
     }
 
     static private function str_random($length = 10)
@@ -126,76 +142,62 @@ class AuthController extends Controller
         return $randomString;
     }
 
-    //verify 2
     public function email_send_code(Request $request)
     {
         $request->validate([
-            'email' =>'required|string|email|max:255',
+            'email' => 'required|string|email|max:255',
             'password' => 'required|string'
         ]);
-        if(Auth::check()){
+        if (Auth::check()) {
             $user = Auth::user();
-            if(Hash::check($request->input('password'), $user->password)){
-                $code = self::str_random(6);
-                $user->verify_code = $code;
-                $user->save();
-                Mail::to($request->email)->send(new ConfirmationCode($code, $user->name));
+            if (Hash::check($request->input('password'), $user->password)) {
+                $existingUser = User::where('email', $request->email)->first();
+                if ($existingUser && $existingUser->id !== $user->id) {
+                    return response()->json([
+                        'message' => 'Email already registered',
+                    ], Response::HTTP_CONFLICT);
+                }
+                $newEmail = EmailToVerify::firstOrNew(['email' => $request->email]);
+                if (!$newEmail->exists) {
+                    $newEmail->code = self::str_random(6);
+                    $newEmail->save();
+                }
+                Mail::to($request->email)->send(new ConfirmationCode($newEmail->code, $user->name));
                 return response()->json([
-                'message' => 'Email sent',
-                ]);
+                    'message' => 'Email sent',
+                ], Response::HTTP_OK);
             }
         }
-        return response()->json(["message" => 'Unauthenticated']);
+        return response()->json([
+            'message' => 'Unauthenticated',
+        ], Response::HTTP_UNAUTHORIZED);
     }
+
     public function verify_code_email(Request $request)
     {
-    $request->validate(['code' => 'required|regex:/^[A-Z0-9]{6}$/', 'email' => 'required|string|email|max:255']);
-    $code = $request->code;
-
-    if(Auth::check()){
-        $user = Auth::user();
-        
-        if ($code == $user->verify_code) {
-
-            if ($request->user()->hasVerifiedEmail()) {
-                return response()->json(['message' => 'Código no válido']);
-            }
-
-            if ($request->user()->markEmailAsVerified()) {
-                $user->verify_code = null;
-                $user->email = $request->email;
-                $user->save();
-                event(new Verified($request->user()));
-                return response()->json(['message' => 'Código válido']);
+        $request->validate(['code' => 'required|regex:/^[A-Z0-9]{6}$/', 'email' => 'required|string|email|max:255']);
+        $code = $request->code;
+        if (Auth::check()) {
+            $newEmail = EmailToVerify::where('email', $request->email)->first();
+            if ($code == $newEmail->code) {
+                $user = Auth::user();
+                if ($request->user()->hasVerifiedEmail()) {
+                    return response()->json(['error' => 'Email already verified'], Response::HTTP_BAD_REQUEST);
+                }
+                if ($request->user()->markEmailAsVerified()) {
+                    $user->email = $newEmail->email;
+                    $user->save();
+                    $newEmail->delete();
+                    event(new Verified($user));
+                    return response()->json(['message' => 'Email verified'], Response::HTTP_OK);
+                }
+            } else {
+                return response()->json(['error' => 'Invalid code'], Response::HTTP_BAD_REQUEST);
             }
         } else {
-            return response()->json(['message' => 'Código no válido']);
+            return response()->json(['error' => 'Unauthenticated'], Response::HTTP_UNAUTHORIZED);
         }
-    } else {
-        // Agrega aquí el manejo cuando el usuario no está autenticado, si es necesario
-        return response()->json(['message' => 'Usuario no autenticado']);
     }
-
-    }
-
-
-    //verify 1
-    public function email_verify(EmailVerificationRequest $request)
-    {
-        $request->fulfill();
-        return response()->json([
-            'success' => "Email verified"
-        ]);
-    }
-    public function verification_notification(Request $request)
-    {
-        $request->user()->sendEmailVerificationNotification();
-        return response()->json([
-            'message' => 'Verification link sent!'
-        ]);
-    }
-
-
 
     public function forgot_password(Request $request)
     {
@@ -219,7 +221,6 @@ class AuthController extends Controller
             }
 
         );
-
         return $status === Password::PASSWORD_RESET ? response()->json(['status' => __($status)]) : response()->json(['status' => 'Password reset error']);
     }
 
@@ -227,23 +228,22 @@ class AuthController extends Controller
     {
         $request->validate([
             'current_password' => 'required',
-            'new_password' => 'required|min:8|different:current_password|confirmed',
+            'new_password' => 'required|min:8|different:current_password|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).+$/',
         ]);
         if (Auth::check()) {
             $user = Auth::user();
             if (!Hash::check($request->input('current_password'), $user->password)) {
-                return response()->json(['status' => 'Current password is incorrect'], 401);
+                return response()->json(['error' => 'Current password is incorrect'], Response::HTTP_BAD_REQUEST);
             }
             $user->forceFill([
                 'password' => Hash::make($request->input('new_password')),
             ]);
-
             $user->save();
-            //cierro session
-
-            Auth::user()->tokens()->delete();
-            return response()->json(['status' => 'Password changed successfully']);
+            Auth::logout();
+            $user->tokens()->delete();
+            return response()->json(['message' => 'Password changed successfully'], Response::HTTP_OK);
         }
-        return response()->json(['status' => 'Auth check error'], 401);
+
+        return response()->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
     }
 }

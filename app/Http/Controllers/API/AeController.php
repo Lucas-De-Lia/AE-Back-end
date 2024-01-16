@@ -16,6 +16,43 @@ class AeController extends Controller
 
     private function getDates()
     {
+        /*
+            $apiUrl = "https://ejemplo.com/api/endpoint";
+            $accessToken = "tu_token_aqui"; // Reemplaza esto con tu token real
+
+            // Inicializar cURL
+            $ch = curl_init($apiUrl);
+
+            // Configurar opciones de cURL
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+            // Configurar el token en la cabecera de la solicitud
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: Bearer ' . $accessToken,
+            ]);
+
+            // Realizar la solicitud GET a la API
+            $response = curl_exec($ch);
+
+            // Verificar si la solicitud fue exitosa
+            if ($response === FALSE) {
+                die('Error al realizar la solicitud a la API: ' . curl_error($ch));
+            }
+
+            // Cerrar la sesión de cURL
+            curl_close($ch);
+
+            // Decodificar la respuesta JSON
+            $data = json_decode($response, true);
+
+            // Procesar la respuesta
+            if ($data !== null) {
+                // La respuesta es un array asociativo
+                print_r($data);
+            } else {
+                echo 'Error al decodificar la respuesta JSON';
+            }
+            */
         $startDay = new DateTime("8/1/2023");
         $fifthMonth = new DateTime($startDay->format('Y-m-d'));
         $sixthMonth = new DateTime($startDay->format('Y-m-d'));
@@ -31,7 +68,7 @@ class AeController extends Controller
             'sixthMonth' => $sixthMonth->format('Y-m-d H:i:s'),
             'lastMonth' => $lastMonth->format('Y-m-d H:i:s'),
         ];
-        
+
     }
 
 

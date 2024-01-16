@@ -11,8 +11,8 @@ Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('logout', [AuthController::class, 'logout']);
 
-    Route::post('/email/verify/{id}/{hash}', [AuthController::class, 'email_verify']);
-    Route::post('/email/verification-notification', [AuthController::class, 'verification_notification']);
+    //Route::post('/email/verify/{id}/{hash}', [AuthController::class, 'email_verify']);
+    //Route::post('/email/verification-notification', [AuthController::class, 'verification_notification']);
 
     Route::post('/email/verify/send', [AuthController::class, 'email_send_code']);
     Route::post('/email/verify', [AuthController::class, 'verify_code_email']);
@@ -27,9 +27,9 @@ Route::prefix('ae')->group(function () {
 });
 
 Route::prefix('resources')->group(function () {
-    Route::post('getpdf', [GuestController::class, 'getPdf']);
-    Route::post('getpdflist', [GuestController::class, 'getPdfList']);
     Route::post('publishpdf', [GuestController::class, 'publishPDF']);
+    Route::post('getpdf', [GuestController::class, 'getPdf']);
 
-    Route::post('getQuestions', [GuestController::class, 'getQuestionList']);
+    Route::get('getpdflist', [GuestController::class, 'getPdfList']);
+    Route::get('getQuestions', [GuestController::class, 'getQuestionList']);
 });
