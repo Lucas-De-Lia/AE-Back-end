@@ -18,11 +18,11 @@ class GuestController extends Controller
     public function getPdf(Request $request)
     {
         $request->validate([
-            'pdfId' => 'required|integer',
+            'id' => 'required',
         ]);
 
         try {
-            $pdfDocument = PdfDocument::findOrFail($request->pdfId);
+            $pdfDocument = PdfDocument::findOrFail($request->id);
             return response()->json($pdfDocument, Response::HTTP_OK);
         } catch (ModelNotFoundException $e) {
             return response()->json([
@@ -40,34 +40,19 @@ class GuestController extends Controller
                 'message' => 'No PDFs found',
             ], Response::HTTP_NOT_FOUND);
         }
-
-        return response()->json([
-            'pdfList' => $pdfDocuments->toArray(),
-        ], Response::HTTP_OK);
-
-        /*
-        $pdfDocuments = PdfDocument::all();
-
-        // Verificar si se encontraron documentos
-        if ($pdfDocuments->count() > 0) {
-            $pdfList = [];
-
-            foreach ($pdfDocuments as $pdfDocument) {
-                $pdfList[] = [
-                    'id' => $pdfDocument->id,
-                    'title' => $pdfDocument->title,
-                    'abstract' => $pdfDocument->abstract,
-                    'img' => $pdfDocument->img
-                ];
-            }
-
-            return response()->json($pdfList);
-        } else {
-            return response()->json([
-                'message' => 'No PDFs found',
-            ], 404);
-        }*/
+        $pdfList = $pdfDocuments->map(function ($pdfDocument) {
+            return [
+                'id' => $pdfDocument->id,
+                'title' => $pdfDocument->title,
+                'abstract' => $pdfDocument->abstract,
+                'img' => $pdfDocument->img,
+            ];
+        })->all();
+        return response()->json(
+        $pdfList
+        , Response::HTTP_OK);
     }
+
     public function publishPDF(Request $request)
     {
         $request->validate([

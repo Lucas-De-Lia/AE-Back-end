@@ -88,6 +88,7 @@ class AuthController extends Controller
         ];
 
         $user = User::create($data);
+        //send verify email but with other function
         return response()->json([
             'message' => 'User created successfully',
             'user' => $user
@@ -97,7 +98,7 @@ class AuthController extends Controller
     public function logout()
     {
         if (Auth::check()) {
-            Auth::logout();
+            //Auth::logout();
             Auth::user()->tokens()->delete();
 
             return response()->json([
