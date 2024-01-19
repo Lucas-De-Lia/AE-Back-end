@@ -52,7 +52,7 @@ class AuthController extends Controller
                 'authorization' => [
                     'token' => $token,
                     'type' => 'Bearer ',
-                    'X-CSRF-TOKEN' => csrf_token()
+                    'X_CSRF_TOKEN' => csrf_token()
                 ]
             ], Response::HTTP_CREATED);
         }
