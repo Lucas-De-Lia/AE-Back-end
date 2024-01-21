@@ -73,7 +73,7 @@ class AuthController extends Controller
                 'regex:/^\d{2}-\d{8}-\d{1}$/',
             ],
             'password' => 'required|string|min:8',
-            'email' => 'required|string|email|max:255|unique:users|unique:verify'
+            'email' => 'required|string|email|max:255|unique:users|unique:email_to_verify'
         ]);
 
         if ($validator->fails()) {
@@ -189,7 +189,7 @@ class AuthController extends Controller
                     $user->email = $newEmail->email;
                     $user->save();
                     $newEmail->delete();
-                    event(new Verified($user));
+                    //event(new Verified($user));
                     return response()->json(['message' => 'Email verified'], Response::HTTP_OK);
                 }
             } else {

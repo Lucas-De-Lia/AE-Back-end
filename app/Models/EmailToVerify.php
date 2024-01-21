@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 class EmailToVerify extends Model
 {
     use HasFactory;
+    protected $table = 'email_to_verify';
+
     protected $username = 'email';
     protected $fillable = ['email', 'code'];
 }
