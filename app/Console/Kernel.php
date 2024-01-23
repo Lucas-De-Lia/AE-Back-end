@@ -14,6 +14,15 @@ class Kernel extends ConsoleKernel
     {
         // $schedule->command('inspire')->hourly();
         $schedule->command('sanctum:prune-expired --hours=24')->daily();
+        $schedule->call(function () {
+            // Calcula el tiempo hace 5 minutos
+            $fiveMinutesAgo = Carbon::now()->subMinutes(5);
+
+            // Realiza la eliminación de registros según la condición
+            DB::table('email_to_verify')
+                ->where('created_at', '<=', $fiveMinutesAgo)
+                ->delete();
+        })->everyFiveMinutes();
     }
 
     /**

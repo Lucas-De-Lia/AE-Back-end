@@ -143,6 +143,7 @@ class AuthController extends Controller
         return $randomString;
     }
 
+
     public function email_send_code(Request $request)
     {
         $request->validate([
