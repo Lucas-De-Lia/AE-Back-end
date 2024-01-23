@@ -152,14 +152,18 @@ class AuthController extends Controller
         if (Auth::check()) {
             $user = Auth::user();
             if (Hash::check($request->input('password'), $user->password)) {
+
                 $existingUser = User::where('email', $request->email)->first();
+
                 if ($existingUser && $existingUser->id !== $user->id) {
+                    // Esto sirve tanto si el email es de otro como si es del mismo usuarios
                     return response()->json([
                         'message' => 'Email already registered',
                     ], Response::HTTP_CONFLICT);
                 }
                 $newEmail = EmailToVerify::firstOrNew(['email' => $request->email]);
                 if (!$newEmail->exists) {
+                    // Si ya existe envia otro codigo
                     $newEmail->code = self::str_random(6);
                     $newEmail->save();
                 }
@@ -179,12 +183,13 @@ class AuthController extends Controller
         $request->validate(['code' => 'required|regex:/^[A-Z0-9]{6}$/', 'email' => 'required|string|email|max:255']);
         $code = $request->code;
         if (Auth::check()) {
+            $user = Auth::user();
             $newEmail = EmailToVerify::where('email', $request->email)->first();
+            if($newEmail === null){
+                // no existe una verifycacion de email para este email o ya se verifico o nunca se creo la verificacion para este.
+                return response()->json(['error' => 'Email already verified'], Response::HTTP_BAD_REQUEST);
+            }
             if ($code == $newEmail->code) {
-                $user = Auth::user();
-                if ($request->user()->hasVerifiedEmail()) {
-                    return response()->json(['error' => 'Email already verified'], Response::HTTP_BAD_REQUEST);
-                }
                 if ($request->user()->markEmailAsVerified()) {
                     $user->email = $newEmail->email;
                     $user->save();
