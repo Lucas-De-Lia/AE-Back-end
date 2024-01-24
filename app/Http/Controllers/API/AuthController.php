@@ -80,6 +80,7 @@ class AuthController extends Controller
             return response()->json(['errors' => $validator->errors()], Response::HTTP_BAD_REQUEST);
         }
 
+        //creo usuario
         $data = [
             'name' => $request->name,
             'cuil' => $request->cuil,
@@ -88,6 +89,19 @@ class AuthController extends Controller
         ];
 
         $user = User::create($data);
+
+        // creo abst de emailverify
+
+        $emailToVerify = new EmailToVerify([
+        'email' => $request->email,
+        'code' => self::str_random(6),
+        ]);
+        $user->emailToVerify()->save($emailToVerify);
+
+        //envio el mail de verificacion
+        //TODO CAMBIAR EMAIL
+        Mail::to($request->email)->send(new ConfirmationCode($newEmail->code, $user->name));
+
         //send verify email but with other function
         return response()->json([
             'message' => 'User created successfully',
@@ -162,13 +176,25 @@ class AuthController extends Controller
                         'message' => 'Email already registered',
                     ], Response::HTTP_CONFLICT);
                 }
-                $newEmail = EmailToVerify::firstOrNew(['email' => $request->email]);
-                if (!$newEmail->exists) {
-                    // Si ya existe envia otro codigo
-                    $newEmail->code = self::str_random(6);
-                    $newEmail->save();
+
+
+                if (!$user->emailToVerify) {
+                    // no tiene
+                    $emailToVerify = new EmailToVerify([
+                    'email' => $request->email,
+                    'code' => self::str_random(6),
+                    ]);
+                    $user->emailToVerify()->save($emailToVerify);
+                } else {
+                    // El usuario ya tiene un modelo EmailToVerify asociado.
+                    $emailToVerify = $user->emailToVerify;
+                    $emailToVerify->email = $request->email; ;
+                    $emailToVerify->code = self::str_random(6);
+                    $emailToVerify->save();
                 }
+
                 Mail::to($request->email)->send(new ConfirmationCode($newEmail->code, $user->name));
+
                 return response()->json([
                     'message' => 'Email sent',
                 ], Response::HTTP_OK);
@@ -185,16 +211,16 @@ class AuthController extends Controller
         $code = $request->code;
         if (Auth::check()) {
             $user = Auth::user();
-            $newEmail = EmailToVerify::where('email', $request->email)->first();
-            if($newEmail === null){
+            $emailToVerify = $user->emailToVerify;
+            if($emailToVerify === null){
                 // no existe una verifycacion de email para este email o ya se verifico o nunca se creo la verificacion para este.
                 return response()->json(['error' => 'Email already verified'], Response::HTTP_BAD_REQUEST);
             }
-            if ($code == $newEmail->code) {
+            if ($code == $emailToVerify->code) {
                 if ($request->user()->markEmailAsVerified()) {
-                    $user->email = $newEmail->email;
+                    $user->email = $emailToVerify->email;
+                    $emailToVerify->delete();
                     $user->save();
-                    $newEmail->delete();
                     //event(new Verified($user));
                     return response()->json(['message' => 'Email verified'], Response::HTTP_OK);
                 }
@@ -205,7 +231,36 @@ class AuthController extends Controller
             return response()->json(['error' => 'Unauthenticated'], Response::HTTP_UNAUTHORIZED);
         }
     }
+    public function verify_link_email(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|regex:/^[A-Z0-9]{6}$/',
+            'id' => 'required|string|max:255']);
+        $code = $request->code;
 
+        //$user = Auth::user();
+        $emailToVerify = EmailToVerify::find($request->id);
+
+        if(!$emailToVerify){
+            // no existe una verifycacion de email para este email o ya se verifico o nunca se creo la verificacion para este.
+            return response()->json(['error' => 'Invalid email verification link'], Response::HTTP_BAD_REQUEST);
+        }
+        if ($code !== $emailToVerify->code) {
+            return response()->json(['error' => 'Invalid code'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $user = $emailToVerify->user;
+
+        if ($user->markEmailAsVerified()) {
+            $user->email = $emailToVerify->email;
+            $emailToVerify->delete();
+            $user->save();
+            //event(new Verified($user));
+            return response()->json(['message' => 'Email verified'], Response::HTTP_OK);
+        }
+        return response()->json(['error' => 'Email verification failed'], Response::HTTP_INTERNAL_SERVER_ERROR);
+
+    }
     public function forgot_password(Request $request)
     {
         $request->validate(['email' => 'required|email']);

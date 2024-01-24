@@ -8,20 +8,17 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Mail\Mailables\Address;
 
-
-class ConfirmationCode extends Mailable
+class ConfirmationLink extends Mailable
 {
     use Queueable, SerializesModels;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(string $code, string $name)
+    public function __construct()
     {
-        $this->code = $code;
-        $this->username = $name;
+        //
     }
 
     /**
@@ -30,7 +27,7 @@ class ConfirmationCode extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Email de Verificación',
+            subject: 'Confirmation Link',
         );
     }
 
@@ -40,8 +37,7 @@ class ConfirmationCode extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.verify',
-            with: ['confirmation_code' => $this->code, 'username' => $this->username],
+            view: 'view.name',
         );
     }
 

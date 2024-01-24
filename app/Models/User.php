@@ -8,11 +8,17 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use \App\Notifications\CustomVerifyEmail;
+use App\Models\EmailToVerify;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable;
     protected $username = 'cuil';
+
+    public function emailToVerify()
+    {
+        return $this->hasOne(EmailToVErify::class);
+    }
     /**
      * The attributes that are mydatabasemass assignable.
      *
@@ -22,7 +28,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'cuil',
         'email',
-        'verify_code',
         'password',
     ];
 

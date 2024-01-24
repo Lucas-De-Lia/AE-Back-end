@@ -12,4 +12,9 @@ class EmailToVerify extends Model
 
     protected $username = 'email';
     protected $fillable = ['email', 'code'];
+    
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

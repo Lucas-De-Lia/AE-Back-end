@@ -15,7 +15,9 @@ return new class extends Migration
             $table->id();
             $table->string('email')->unique();
             $table->string('code');
+            $table->unsignedBigInteger('user_id');
             $table->timestamps();
+            $table->unique(['user_id', 'email']);
         });
     }
 
