@@ -100,7 +100,7 @@ class AuthController extends Controller
 
         //envio el mail de verificacion
         //TODO CAMBIAR EMAIL
-        Mail::to($request->email)->send(new ConfirmationCode($newEmail->code, $user->name));
+        Mail::to($request->email)->send(new ConfirmationCode($emailToVerify->code, $user->name));
 
         //send verify email but with other function
         return response()->json([
