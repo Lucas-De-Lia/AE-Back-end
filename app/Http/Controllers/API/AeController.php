@@ -216,7 +216,7 @@ class AeController extends Controller
         $lastMonth = new DateTime($startDay->format('Y-m-d'));
 
         $fifthMonth->modify('+5 months');
-        $sixthMonth->modify('+6 months');
+        $sixthMonth->modify('+30 days');
         $lastMonth->modify('+12 months');
         //return [];
         return [

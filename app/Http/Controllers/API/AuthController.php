@@ -193,7 +193,7 @@ class AuthController extends Controller
                     $emailToVerify->save();
                 }
 
-                Mail::to($request->email)->send(new ConfirmationCode($newEmail->code, $user->name));
+                Mail::to($request->email)->send(new ConfirmationCode($emailToVerify->code, $user->name));
 
                 return response()->json([
                     'message' => 'Email sent',

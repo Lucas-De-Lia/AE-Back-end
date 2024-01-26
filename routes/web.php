@@ -14,5 +14,5 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
-    return view('emails.verify')->with('confirmation_code', "251321")->with('name', "Ignacio Romang");
+    return view('emails.verify')->with('confirmation_code', "251321")->with('username', "Ignacio Romang");
 });

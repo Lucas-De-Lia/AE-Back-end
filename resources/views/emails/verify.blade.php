@@ -1,15 +1,24 @@
-@component('mail::message')
-# ¡Hola, {{ $username }}!
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confirmación de Correo Electrónico</title>
+</head>
+<body>
 
-Gracias por registrarte en nuestra plataforma. Para completar la verificación de tu correo electrónico, por favor ingresa el siguiente código en la página de verificación:
+<h1>¡Hola, {{ $username }}!</h1>
 
-**Código de Verificación: {{ $confirmation_code }}**
+<p>Gracias por registrarte en nuestra plataforma. Para completar la verificación de tu correo electrónico, por favor ingresa el siguiente código en la página de verificación:</p>
 
-*Puedes copiar manualmente este código utilizando las funciones estándar de tu sistema operativo.*
+<p><strong>Código de Verificación:</strong> {{ $confirmation_code }}</p>
 
-Si no has intentado registrarte en nuestro sitio, puedes ignorar este mensaje.
+<p><em>Puedes copiar manualmente este código utilizando las funciones estándar de tu sistema operativo.</em></p>
 
-Gracias,<br>
-{{ config('app.name') }}
-@endcomponent
+<p>Si no has intentado registrarte en nuestro sitio, puedes ignorar este mensaje.</p>
 
+<p>Gracias,<br>
+{{ config('app.name') }}</p>
+
+</body>
+</html>
