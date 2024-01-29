@@ -26,15 +26,15 @@ class AeController extends Controller
     {
         // Retrieve API URL and token from environment variables
         if(Auth::check()){
-            $url = env("API_AE");
-            $token = env("TOKEN_AE");
+            $url = env("API_URL_AE");
+            $token = env("API_TOKEN_AE");
 
             // Initialize cURL
             $ch = curl_init($url . '/fechas/' . $this.getDNI());
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_HTTPHEADER => [
-                    'Authorization: Bearer ' . $token,
+                    'API-Token' . $token,
                 ],
             ]);
 
@@ -99,8 +99,8 @@ class AeController extends Controller
     private function finalizeAE()
     {
         if(Auth::check()){
-            $url = env("API_AE");
-            $token = env("TOKEN_AE");
+            $url = env("API_URL_AE");
+            $token = env("API_TOKEN_AE");
 
 
             // Initialize cURL
@@ -108,7 +108,7 @@ class AeController extends Controller
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_HTTPHEADER => [
-                    'Authorization: Bearer ' . $token,
+                    'API-Token' . $token,
                 ],
             ]);
 
@@ -145,48 +145,59 @@ class AeController extends Controller
         preg_match('/-(\d+)-/', $user->cuil, $matches);
         return $matches[1];
     }
+
+
     private function newAE(Request $request)
     {
         $request->validate([
-            'firstname' => 'required|string',
-            'lastname' => 'required|string',
-            'birthdate' => 'required',
-            'gender' => 'required',
-            'address' => 'required',
-            'address_number' => 'required',
-            'postalcode' => 'required',
-            'city' => 'required',
-            'state' => 'required',
-            'phone' => 'required',
-            'startdate' => 'required',
+            'firstname' => 'required|string|max:150',
+            'lastname' => 'required|string|max:100',
+            'birthdate' => 'required|date',
+            'gender' => 'required', //ver como hacerlo
+            'address' => 'required|string|max:100',
+            'address_number' => 'required|integer',
+            'floor' => 'nullable|string|max:5',
+            'apartament' => 'nullable|string|max:5',
+            'postalcode' => 'required|string|max:10',
+            'city' => 'required|string|max:200',
+            'state' => 'required|string|max:200',
+            'phone' => 'required|string|max:200',
+            'startdate' => 'required|date',
+            'ae_datos.ocupacion'        => 'nullable|string|max:4|exists:ae_ocupacion,codigo', // VER COMO HACERLO
+            'ae_datos.capacitacion'     => 'nullable|string|max:4|exists:ae_capacitacion,codigo',  // VER COMO HACERLO
+            'ae_datos.estado_civil'     => 'nullable|string|max:4|exists:ae_estado_civil,codigo',  // VER COMO HACERLO
+            'renewvaldate' => 'nullable|date'
         ]);
 
         if(Auth::check()){;
             $user = Auth::user();
+            //TODO VER SI alguno tiene ya datos cargados y reutilizar si no existen
             $postData = [
-                'nro_dni' =>  $this.getDNI(),
-                'nombres' => $request->firstname,
-                'apellido' => $request->lastname,
-                'fecha_nacimiento' => $request->birthdate,
-                'sexo' => $request->gender,
-                'domicilio' => $request->address,
-                'nro_domicilio' => $request->address_number,
-                'codigo_postal' => $request->postalcode,
-                'nombre_localidad' => $request->city,
-                'nombre_provincia' => $request->state,
-                'telefono' => $request->phone,
-                'correo' => $user->email,
+                'ae_datos' => [
+                    'nro_dni' =>  $this.getDNI(),
+                    'nombres' => $request->firstname,
+                    'apellido' => $request->lastname,
+                    'fecha_nacimiento' => $request->birthdate,
+                    'sexo' => $request->gender,
+                    'domicilio' => $request->address,
+                    'nro_domicilio' => $request->address_number,
+                    'codigo_postal' => $request->postalcode,
+                    'nombre_localidad' => $request->city,
+                    'nombre_provincia' => $request->state,
+                    'telefono' => $request->phone,
+                    'correo' => $user->email,
+                ],
                 'ae_estado' => ['fecha_ae' => $request->startdate],
             ];
 
+            $url = env("API_URL_AE");
+            $token = env("API_TOKEN_AE");
 
-            $url = env("API_AE");
-            $token = env("TOKEN_AE");
             $ch = curl_init($url . '/agregar');
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_HTTPHEADER => [
-                    'Authorization: Bearer ' . $token,
+                    'API-Token' . $token,
                 ],
                 CURLOPT_POST => true, // Set the request type to POST
                 CURLOPT_POSTFIELDS => json_encode($postData), // Include data to be sent in the request
