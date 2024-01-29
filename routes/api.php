@@ -24,6 +24,7 @@ Route::prefix('auth')->group(function () {
 
 Route::prefix('ae')->group(function () {
     Route::post('aedates', [AeController::class, 'getaedates']);
+    Route::get('ae-dates', [AeController::class, 'getCalendarDates']);
 });
 
 Route::prefix('resources')->group(function () {
