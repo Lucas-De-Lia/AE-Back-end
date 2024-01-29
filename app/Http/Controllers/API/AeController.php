@@ -26,15 +26,15 @@ class AeController extends Controller
     {
         // Retrieve API URL and token from environment variables
         if(Auth::check()){
-            $url = env("API_AE");
-            $token = env("TOKEN_AE");
+            $url = env("API_URL_AE");
+            $token = env("API_TOKEN_AE");
 
             // Initialize cURL
             $ch = curl_init($url . '/fechas/' . $this.getDNI());
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_HTTPHEADER => [
-                    'Authorization: Bearer ' . $token,
+                    'API-Token' . $token,
                 ],
             ]);
 
@@ -99,8 +99,8 @@ class AeController extends Controller
     private function finalizeAE()
     {
         if(Auth::check()){
-            $url = env("API_AE");
-            $token = env("TOKEN_AE");
+            $url = env("API_URL_AE");
+            $token = env("API_TOKEN_AE");
 
 
             // Initialize cURL
@@ -108,7 +108,7 @@ class AeController extends Controller
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_HTTPHEADER => [
-                    'Authorization: Bearer ' . $token,
+                    'API-Token' . $token,
                 ],
             ]);
 
@@ -179,14 +179,14 @@ class AeController extends Controller
                 'ae_estado' => ['fecha_ae' => $request->startdate],
             ];
 
+            $url = env("API_URL_AE");
+            $token = env("API_TOKEN_AE");
 
-            $url = env("API_AE");
-            $token = env("TOKEN_AE");
             $ch = curl_init($url . '/agregar');
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_HTTPHEADER => [
-                    'Authorization: Bearer ' . $token,
+                    'API-Token' . $token,
                 ],
                 CURLOPT_POST => true, // Set the request type to POST
                 CURLOPT_POSTFIELDS => json_encode($postData), // Include data to be sent in the request
