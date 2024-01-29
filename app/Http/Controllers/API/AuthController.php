@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Mail\ConfirmationCode;
 use App\Models\EmailToVerify;
+use App\Mail\ConfirmationLink;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Support\Facades\Auth;
@@ -24,8 +25,8 @@ class AuthController extends Controller
     public function __construct()
     {
         $this->middleware('throttle:api');
-        $this->middleware(['verified'], ['except' => ['login', 'register', 'email_send_code', 'verify_code_email']]);
-        $this->middleware(['auth:sanctum'], ['except' => ['login', 'register']]);
+        $this->middleware(['verified'], ['except' => ['login', 'register', 'email_send_code', 'verify_code_email','verify_link_email']]);
+        $this->middleware(['auth:sanctum'], ['except' => ['login', 'register','verify_link_email']]);
         //$this->middleware(['signed'], ['except' => ['login', 'register', 'logout', 'refresh']]);
     }
 
@@ -100,7 +101,7 @@ class AuthController extends Controller
 
         //envio el mail de verificacion
         //TODO CAMBIAR EMAIL
-        Mail::to($request->email)->send(new ConfirmationCode($emailToVerify->code, $user->name));
+        Mail::to($request->email)->send(new ConfirmationLink($user->name,$emailToVerify->id,  $emailToVerify->code));
 
         //send verify email but with other function
         return response()->json([
@@ -231,15 +232,18 @@ class AuthController extends Controller
             return response()->json(['error' => 'Unauthenticated'], Response::HTTP_UNAUTHORIZED);
         }
     }
+
     public function verify_link_email(Request $request)
     {
         $request->validate([
-            'code' => 'required|regex:/^[A-Z0-9]{6}$/',
+            'hash' => 'required|regex:/^[A-Z0-9]{6}$/',
             'id' => 'required|string|max:255']);
-        $code = $request->code;
+        
+        $code = $request->query('hash');
+        $id = $request->query('id');
 
         //$user = Auth::user();
-        $emailToVerify = EmailToVerify::find($request->id);
+        $emailToVerify = EmailToVerify::find($id);
 
         if(!$emailToVerify){
             // no existe una verifycacion de email para este email o ya se verifico o nunca se creo la verificacion para este.
@@ -261,6 +265,7 @@ class AuthController extends Controller
         return response()->json(['error' => 'Email verification failed'], Response::HTTP_INTERNAL_SERVER_ERROR);
 
     }
+    
     public function forgot_password(Request $request)
     {
         $request->validate(['email' => 'required|email']);

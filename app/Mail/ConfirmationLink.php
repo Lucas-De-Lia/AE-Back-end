@@ -16,9 +16,11 @@ class ConfirmationLink extends Mailable
     /**
      * Create a new message instance.
      */
-    public function __construct()
+    public function __construct($name, $id, $code)
     {
-        //
+        $this->username = $name;
+        $this->id_verf = $id;
+        $this->code = $code;
     }
 
     /**
@@ -37,7 +39,8 @@ class ConfirmationLink extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'view.name',
+            view: 'emails.verifylink',
+            with: ['username' => $this->username, 'id' => $this->id_verf,'hash' => $this->code],
         );
     }
 
