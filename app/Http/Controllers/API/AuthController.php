@@ -64,26 +64,36 @@ class AuthController extends Controller
 
     public function register(Request $request)
     {
-
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'cuil' => [
+        $request->validate([
+               'cuil' => [
                 'required',
                 'string',
                 'unique:users',
                 'regex:/^\d{2}-\d{8}-\d{1}$/',
-            ],
+               ],
+            'firstname' => 'required|string|max:150',
+            'lastname' => 'required|string|max:100',
+            'birthdate' => 'required|date',
+            'gender' => 'required', //ver como hacerlo
+            'address' => 'required|string|max:100',
+            'address_number' => 'required|integer',
+            'floor' => 'nullable|string|max:5',
+            'apartament' => 'nullable|string|max:5',
+            'postalcode' => 'required|string|max:10',
+            'city' => 'required|string|max:200',
+            'province' => 'required|string|max:200',
+            'phone' => 'required|string|max:200',
+            'startdate' => 'required|date',
+            'occupation'        => 'nullable|string|max:4', // VER COMO HACERLO
+            'study'     => 'nullable|string|max:4',  // VER COMO HACERLO
+            'email' => 'required|string|email|max:255|unique:users|unique:email_to_verify',
             'password' => 'required|string|min:8',
-            'email' => 'required|string|email|max:255|unique:users|unique:email_to_verify'
+            'renewvaldate' => 'nullable|date'
         ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], Response::HTTP_BAD_REQUEST);
-        }
 
         //creo usuario
         $data = [
-            'name' => $request->name,
+            'name' => $request->firstname . " " . $request->lastname,
             'cuil' => $request->cuil,
             'password' => Hash::make($request->password),
             'email' => $request->email,
@@ -95,18 +105,19 @@ class AuthController extends Controller
 
         $emailToVerify = new EmailToVerify([
         'email' => $request->email,
-        'code' => self::str_random(6),
+        'code' => self::str_random(10),
         ]);
         $user->emailToVerify()->save($emailToVerify);
 
         //envio el mail de verificacion
-        //TODO CAMBIAR EMAIL
         Mail::to($request->email)->send(new ConfirmationLink($user->name,$emailToVerify->id,  $emailToVerify->code));
 
+        $ae = AeController::register_ae($request);
         //send verify email but with other function
         return response()->json([
             'message' => 'User created successfully',
-            'user' => $user
+            'user' => $user,
+            'ae' =>  $ae
         ], Response::HTTP_CREATED);
     }
 
@@ -183,7 +194,7 @@ class AuthController extends Controller
                     // no tiene
                     $emailToVerify = new EmailToVerify([
                     'email' => $request->email,
-                    'code' => self::str_random(6),
+                    'code' => self::str_random(10),
                     ]);
                     $user->emailToVerify()->save($emailToVerify);
                 } else {
@@ -238,7 +249,7 @@ class AuthController extends Controller
         $request->validate([
             'hash' => 'required|regex:/^[A-Z0-9]{6}$/',
             'id' => 'required|string|max:255']);
-        
+
         $code = $request->query('hash');
         $id = $request->query('id');
 
@@ -265,7 +276,7 @@ class AuthController extends Controller
         return response()->json(['error' => 'Email verification failed'], Response::HTTP_INTERNAL_SERVER_ERROR);
 
     }
-    
+
     public function forgot_password(Request $request)
     {
         $request->validate(['email' => 'required|email']);

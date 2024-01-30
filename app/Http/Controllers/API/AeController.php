@@ -19,6 +19,7 @@ class AeController extends Controller
     public function __construct()
     {
         $this->middleware(['throttle:api', 'auth:sanctum']);
+        $this->middleware(['auth:sanctum'], ['except' => ['register_ae']]);
     }
 
 
@@ -139,15 +140,43 @@ class AeController extends Controller
         }
     }
 
-    private function getDNI()
+    private function getDNI($cuil)
     {
-        $user = Auth::user();
-        preg_match('/-(\d+)-/', $user->cuil, $matches);
-        return $matches[1];
+        preg_match('/-(\d+)-/', $cuil, $matches);
+        return intval($matches[1]);;
     }
 
+    public static function register_ae(Request $request)
+    {
 
-    private function newAE(Request $request)
+        $postData = [
+            'ae_datos' => [
+                'nro_dni' =>  $request->dni,
+                'nombres' => $request->firstname,
+                'apellido' => $request->lastname,
+                'fecha_nacimiento' => $request->birthdate,
+                'sexo' => $request->gender,
+                'domicilio' => $request->address,
+                'nro_domicilio' => $request->address_number,
+                'piso' => $request->floor,
+                'dpto' => $request->apartament,
+                'codigo_postal' => $request->postalcode,
+                'nombre_localidad' => $request->city,
+                'nombre_provincia' => $request->province,
+                'ocupacion' => $request->occupation,
+                'capacitacion' => $request->study,
+                //'estado_civil' => $request,
+                'telefono' => $request->phone,
+                'correo' => $request->email,
+            ],
+            'ae_estado' => ['fecha_ae' => $request->startdate],
+        ];
+        $response = AeController::start($postData);
+        return $response;
+
+    }
+
+    private function start_ae(Request $request)
     {
         $request->validate([
             'firstname' => 'required|string|max:150',
@@ -160,12 +189,12 @@ class AeController extends Controller
             'apartament' => 'nullable|string|max:5',
             'postalcode' => 'required|string|max:10',
             'city' => 'required|string|max:200',
-            'state' => 'required|string|max:200',
+            'province' => 'required|string|max:200',
             'phone' => 'required|string|max:200',
             'startdate' => 'required|date',
-            'ae_datos.ocupacion'        => 'nullable|string|max:4|exists:ae_ocupacion,codigo', // VER COMO HACERLO
-            'ae_datos.capacitacion'     => 'nullable|string|max:4|exists:ae_capacitacion,codigo',  // VER COMO HACERLO
-            'ae_datos.estado_civil'     => 'nullable|string|max:4|exists:ae_estado_civil,codigo',  // VER COMO HACERLO
+            'occupation'        => 'nullable|string|max:4|exists:ae_ocupacion,codigo', // VER COMO HACERLO
+            'study'     => 'nullable|string|max:4|exists:ae_capacitacion,codigo',  // VER COMO HACERLO
+            //'ae_datos.estado_civil'     => 'nullable|string|max:4|exists:ae_estado_civil,codigo',  // VER COMO HACERLO
             'renewvaldate' => 'nullable|date'
         ]);
 
@@ -174,50 +203,49 @@ class AeController extends Controller
             //TODO VER SI alguno tiene ya datos cargados y reutilizar si no existen
             $postData = [
                 'ae_datos' => [
-                    'nro_dni' =>  $this.getDNI(),
+                    'nro_dni' =>  getDNI($request->cuil),
                     'nombres' => $request->firstname,
                     'apellido' => $request->lastname,
                     'fecha_nacimiento' => $request->birthdate,
                     'sexo' => $request->gender,
                     'domicilio' => $request->address,
                     'nro_domicilio' => $request->address_number,
+                    'piso' => $request->floor,
+                    'dpto' => $request->apartament,
                     'codigo_postal' => $request->postalcode,
                     'nombre_localidad' => $request->city,
-                    'nombre_provincia' => $request->state,
+                    'nombre_provincia' => $request->province,
+                    'ocupacion' => $request->occupation,
+                    'capacitacion' => $request->study,
+                    //'estado_civil' => $request,
                     'telefono' => $request->phone,
                     'correo' => $user->email,
                 ],
                 'ae_estado' => ['fecha_ae' => $request->startdate],
             ];
-
-            $url = env("API_URL_AE");
-            $token = env("API_TOKEN_AE");
-
-            $ch = curl_init($url . '/agregar');
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => [
-                    'API-Token' . $token,
-                ],
-                CURLOPT_POST => true, // Set the request type to POST
-                CURLOPT_POSTFIELDS => json_encode($postData), // Include data to be sent in the request
-            ]);
-
-            // Make the POST request to the API
-            $response = curl_exec($ch);
-
-            // Check for cURL errors
-            if (curl_errno($ch)) {
-                return response()->json('Error when making API request: ' . curl_error($ch), Response::HTTP_BAD_REQUEST);
-            }
-
-            curl_close($ch);
-
-            // Decode the JSON response
-            $data = json_decode($response);
+            $response = start($postData);
+            return $response;
         }
     }
 
+    public static function start($postData){
+        $url = env("API_URL_AE");
+        $token = env("API_TOKEN_AE");
+
+        $ch = curl_init($url . '/agregar');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'API-Token: ' . $token,
+            ],
+            CURLOPT_POST => true, // Set the request type to POST
+            CURLOPT_POSTFIELDS => json_encode($postData), // Include data to be sent in the request
+        ]);
+
+        // Make the POST request to the API
+        $response = curl_exec($ch);
+        return $response;
+    }
     private function getDates()
     {
 

@@ -13,7 +13,7 @@ Route::prefix('auth')->group(function () {
 
     //Route::post('/email/verify/{id}/{hash}', [AuthController::class, 'email_verify']);
     //Route::post('/email/verification-notification', [AuthController::class, 'verification_notification']);
-    
+
     Route::post('/email/verify/send', [AuthController::class, 'email_send_code']);
     Route::get('/email/verify-link', [AuthController::class, 'verify_link_email']);
     Route::post('/email/verify', [AuthController::class, 'verify_code_email']);
@@ -26,6 +26,7 @@ Route::prefix('auth')->group(function () {
 Route::prefix('ae')->group(function () {
     Route::post('aedates', [AeController::class, 'getaedates']);
     Route::get('ae-dates', [AeController::class, 'getCalendarDates']);
+    Route::post('start', [AeController::class, 'start_ae']);
 });
 
 Route::prefix('resources')->group(function () {
