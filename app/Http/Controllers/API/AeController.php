@@ -6,12 +6,15 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use DateTime;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Http;
 
 class AE {
-    const FINALIZABLE = 0;
-    const FINALIZADA = 1;
-    const NO_FINALIZABLE = 2;
+    const NON_AE = -1;
+    const FINISHABLE = 0;
+    const FINALIZED = 1;
+    const NON_FINISHABLE = 2;
 }
 
 class AeController extends Controller
@@ -22,35 +25,27 @@ class AeController extends Controller
         $this->middleware(['auth:sanctum'], ['except' => ['register_ae']]);
     }
 
-
-    private function getCalendarDates()
+    public function get_calendar_dates()
     {
         // Retrieve API URL and token from environment variables
         if(Auth::check()){
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");
-
-            // Initialize cURL
-            $ch = curl_init($url . '/fechas/' . $this.getDNI());
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => [
-                    'API-Token' . $token,
-                ],
-            ]);
+            $user = Auth::user();
+            $DNI = AeController::getDNI($user->cuil);
 
             // Make the GET request to the API
-            $response = curl_exec($ch);
+            $response = Http::withHeaders([
+                'API-Token' => $token,
+            ])->get($url . '/fechas/' . (string)$DNI);
 
-            // Check for cURL errors
-            if (curl_errno($ch)) {
-                return response()->json('Error when making API request: ' . curl_error($ch), Response::HTTP_BAD_REQUEST);
+            // Check for any HTTP errors
+            if ($response->failed()) {
+                return response()->json('Error when making API request: ' . $response->status(), Response::HTTP_BAD_REQUEST);
             }
 
-            curl_close($ch);
-
             // Decode the JSON response
-            $data = json_decode($response);
+            $data = $response->json();
 
             // Check for JSON decoding errors
             if (json_last_error() !== JSON_ERROR_NONE) {
@@ -58,33 +53,25 @@ class AeController extends Controller
             }
 
             // Build the response
-            if (isset($data->error)) {
-                return response()->json(['status' => 'AE not found'], Response::HTTP_ACCEPTED);
+            if (isset($data['error'])) {
+                return response()->json(['type' => AE::NON_AES], Response::HTTP_ACCEPTED);
             }
 
-            if (isset($data->fecha_renovacion_ae)) {
-                $type = AE::FINALIZED;
-                $dates = [
-                    'startDay' => $data->fecha_ae,
-                    'lastMonth' => $data->fecha_cierre_ae,
-                    'fifthMonth' => $data->fecha_renovacion,
-                    'sixthMonth' => $data->fecha_vencimiento,
-                    'renewalDate' => $data->fecha_revocacion_ae,
-                ];
-            } elseif (isset($data->fecha_renovacion)) {
+            $type = AE::NON_FINISHABLE; // Default type if no specific type is found
+            $dates = [
+                'startDay' => $data['fecha_ae'],
+                'lastMonth' => $data['fecha_cierre_ae'],
+            ];
+
+            if (isset($data['fecha_renovacion'])) {
                 $type = AE::FINISHABLE;
-                $dates = [
-                    'startDay' => $data->fecha_ae,
-                    'lastMonth' => $data->fecha_cierre_ae,
-                    'fifthMonth' => $data->fecha_renovacion,
-                    'sixthMonth' => $data->fecha_vencimiento,
-                ];
-            } else {
-                $type = AE::NON_FINISHABLE;
-                $dates = [
-                    'startDay' => $data->fecha_ae,
-                    'lastMonth' => $data->fecha_cierre_ae,
-                ];
+                $dates['fifthMonth'] = $data['fecha_renovacion'];
+                $dates['sixthMonth'] = $data['fecha_vencimiento'];
+            }
+
+            if (isset($data['fecha_renovacion_ae'])) {
+                $type = AE::FINALIZED;
+                $dates['renewalDate'] = $data['fecha_revocacion_ae'];
             }
 
             $response = [
@@ -92,58 +79,60 @@ class AeController extends Controller
                 'dates' => $dates,
             ];
 
+            //Log::info(json_encode($dates));
+
             return response()->json($response, Response::HTTP_OK);
         }
     }
 
-
-    private function finalizeAE()
+    private function finalize_ae()
     {
-        if(Auth::check()){
+        if (Auth::check()) {
+
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");
+            $user = Auth::user();
+            $DNI = AeController::getDNI($user->cuil);
 
-
-            // Initialize cURL
-            $ch = curl_init($url . '/finalizar/'. $this.getDNI() );
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => [
-                    'API-Token' . $token,
-                ],
-            ]);
-
-            // Make the GET request to the API
-            $response = curl_exec($ch);
-
-            // Check for cURL errors
-            if (curl_errno($ch)) {
-                return response()->json('Error when making API request: ' . curl_error($ch), Response::HTTP_BAD_REQUEST);
+            if ($user->cuil !== $request->cuil) {
+                return response()->json(['error' => 'Current cuil is incorrect'], Response::HTTP_BAD_REQUEST);
             }
 
-            curl_close($ch);
+            if (!Hash::check($request->input('current_password'), $user->password)) {
+                return response()->json(['error' => 'Current password is incorrect'], Response::HTTP_BAD_REQUEST);
+            }
 
-            // Decode the JSON response
-            $data = json_decode($response);
+            // Realizar la solicitud al API utilizando Guzzle
+            $response = Http::withHeaders([
+                'API-Token' => $token,
+            ])->get($url . '/finalizar/' . (string)$DNI);
 
-            // Check for JSON decoding errors
+            // Verificar si ocurrió algún error en la solicitud HTTP
+            if ($response->failed()) {
+                return response()->json('Error when making API request: ' . $response->status(), Response::HTTP_BAD_REQUEST);
+            }
+
+            // Decodificar la respuesta JSON
+            $data = $response->json();
+
+            // Verificar si la decodificación JSON fue exitosa
             if (json_last_error() !== JSON_ERROR_NONE) {
                 return response()->json('Error decoding JSON response: ' . json_last_error_msg(), Response::HTTP_INTERNAL_SERVER_ERROR);
             }
-            if(isset($data->id_autoexcluido)){
-                return response()->json(['status' => $data->id_autoexcluido], Response::HTTP_ACCEPTED);
-            }
-            else{
-                return response()->json(['status' => $data,Response::HTTP_OK]);
-            }
 
+            // Verificar si existe la propiedad 'id_autoexcluido' en la respuesta
+            if (isset($data['id_autoexcluido'])) {
+                return response()->json(['status' => $data['id_autoexcluido']], Response::HTTP_ACCEPTED);
+            } else {
+                return response()->json(['status' => $data], Response::HTTP_OK);
+            }
         }
     }
 
-    private function getDNI($cuil)
+    private static function getDNI($cuil)
     {
         preg_match('/-(\d+)-/', $cuil, $matches);
-        return intval($matches[1]);;
+        return (int)($matches[1]);;
     }
 
     public static function register_ae(Request $request)
@@ -151,13 +140,13 @@ class AeController extends Controller
 
         $postData = [
             'ae_datos' => [
-                'nro_dni' =>  $request->dni,
+                'nro_dni' => AeController::getDNI($request->cuil),
                 'nombres' => $request->firstname,
                 'apellido' => $request->lastname,
                 'fecha_nacimiento' => $request->birthdate,
                 'sexo' => $request->gender,
                 'domicilio' => $request->address,
-                'nro_domicilio' => $request->address_number,
+                'nro_domicilio' => (int) $request->address_number,
                 'piso' => $request->floor,
                 'dpto' => $request->apartament,
                 'codigo_postal' => $request->postalcode,
@@ -203,7 +192,7 @@ class AeController extends Controller
             //TODO VER SI alguno tiene ya datos cargados y reutilizar si no existen
             $postData = [
                 'ae_datos' => [
-                    'nro_dni' =>  getDNI($request->cuil),
+                    'nro_dni' =>  AeController::getDNI($request->cuil),
                     'nombres' => $request->firstname,
                     'apellido' => $request->lastname,
                     'fecha_nacimiento' => $request->birthdate,
@@ -232,20 +221,16 @@ class AeController extends Controller
         $url = env("API_URL_AE");
         $token = env("API_TOKEN_AE");
 
-        $ch = curl_init($url . '/agregar');
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => [
-                'API-Token: ' . $token,
-            ],
-            CURLOPT_POST => true, // Set the request type to POST
-            CURLOPT_POSTFIELDS => json_encode($postData), // Include data to be sent in the request
-        ]);
+        //Log::info(json_encode($postData));
 
-        // Make the POST request to the API
-        $response = curl_exec($ch);
-        return $response;
+        $response = Http::withHeaders([
+            'API-Token' => $token,
+            'Content-Type' => 'application/json',
+        ])->post($url . '/agregar', $postData);
+
+        return $response->body();
     }
+
     private function getDates()
     {
 
@@ -268,14 +253,4 @@ class AeController extends Controller
 
     }
 
-
-    public function getaedates(Request $request)
-    {
-        if (Auth::check()) {
-            // Usuario autenticado, obtén sus datoss
-            //$user = Auth::user();
-            //TODO CONSULTAR API
-            return response()->json($this->getDates());
-        }
-    }
 }

@@ -65,7 +65,7 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-               'cuil' => [
+            'cuil' => [
                 'required',
                 'string',
                 'unique:users',
@@ -247,7 +247,7 @@ class AuthController extends Controller
     public function verify_link_email(Request $request)
     {
         $request->validate([
-            'hash' => 'required|regex:/^[A-Z0-9]{6}$/',
+            'hash' => 'required|regex:/^[A-Z0-9]{10}$/',
             'id' => 'required|string|max:255']);
 
         $code = $request->query('hash');
