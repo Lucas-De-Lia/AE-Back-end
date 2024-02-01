@@ -7,13 +7,14 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use DateTime;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
 
 class AE {
     const NON_AE = -1;
-    const FINISHABLE = 0;
-    const FINALIZED = 1;
+    const FINALIZED = 0;
+    const FINISHABLE = 1;
     const NON_FINISHABLE = 2;
 }
 
@@ -54,10 +55,10 @@ class AeController extends Controller
 
             // Build the response
             if (isset($data['error'])) {
-                return response()->json(['type' => AE::NON_AES], Response::HTTP_ACCEPTED);
+                return response()->json(['type' => AE::NON_AE], Response::HTTP_ACCEPTED);
             }
 
-            $type = AE::NON_FINISHABLE; // Default type if no specific type is found
+            $type = AE::NON_FINISHABLE;
             $dates = [
                 'startDay' => $data['fecha_ae'],
                 'lastMonth' => $data['fecha_cierre_ae'],
@@ -71,7 +72,7 @@ class AeController extends Controller
 
             if (isset($data['fecha_renovacion_ae'])) {
                 $type = AE::FINALIZED;
-                $dates['renewalDate'] = $data['fecha_revocacion_ae'];
+                $dates['renewalMonth'] = $data['fecha_revocacion_ae'];
             }
 
             $response = [
@@ -85,7 +86,7 @@ class AeController extends Controller
         }
     }
 
-    private function finalize_ae()
+    public function finalize_ae(Request $request)
     {
         if (Auth::check()) {
 
@@ -94,11 +95,7 @@ class AeController extends Controller
             $user = Auth::user();
             $DNI = AeController::getDNI($user->cuil);
 
-            if ($user->cuil !== $request->cuil) {
-                return response()->json(['error' => 'Current cuil is incorrect'], Response::HTTP_BAD_REQUEST);
-            }
-
-            if (!Hash::check($request->input('current_password'), $user->password)) {
+            if (!Hash::check($request->input('password'), $user->password)) {
                 return response()->json(['error' => 'Current password is incorrect'], Response::HTTP_BAD_REQUEST);
             }
 
@@ -107,10 +104,6 @@ class AeController extends Controller
                 'API-Token' => $token,
             ])->get($url . '/finalizar/' . (string)$DNI);
 
-            // Verificar si ocurrió algún error en la solicitud HTTP
-            if ($response->failed()) {
-                return response()->json('Error when making API request: ' . $response->status(), Response::HTTP_BAD_REQUEST);
-            }
 
             // Decodificar la respuesta JSON
             $data = $response->json();
@@ -122,7 +115,7 @@ class AeController extends Controller
 
             // Verificar si existe la propiedad 'id_autoexcluido' en la respuesta
             if (isset($data['id_autoexcluido'])) {
-                return response()->json(['status' => $data['id_autoexcluido']], Response::HTTP_ACCEPTED);
+                return response()->json(['status' => $data['id_autoexcluido']], Response::HTTP_OK);
             } else {
                 return response()->json(['status' => $data], Response::HTTP_OK);
             }
@@ -229,28 +222,6 @@ class AeController extends Controller
         ])->post($url . '/agregar', $postData);
 
         return $response->body();
-    }
-
-    private function getDates()
-    {
-
-        $startDay = new DateTime("8/5/2023");
-        $fifthMonth = new DateTime($startDay->format('Y-m-d'));
-        $sixthMonth = new DateTime($startDay->format('Y-m-d'));
-        $lastMonth = new DateTime($startDay->format('Y-m-d'));
-
-        $fifthMonth->modify('+5 months');
-        $sixthMonth->modify('+5 months');
-        $sixthMonth->modify('+29 days');
-        $lastMonth->modify('+12 months');
-        //return [];
-        return [
-            'startDay' => $startDay->format('Y-m-d H:i:s'),
-            'fifthMonth' => $fifthMonth->format('Y-m-d H:i:s'),
-            'sixthMonth' => $sixthMonth->format('Y-m-d H:i:s'),
-            'lastMonth' => $lastMonth->format('Y-m-d H:i:s'),
-        ];
-
     }
 
 }
