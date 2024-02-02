@@ -70,7 +70,7 @@ class AeController extends Controller
                 $dates['sixthMonth'] = $data['fecha_vencimiento'];
             }
 
-            if (isset($data['fecha_renovacion_ae'])) {
+            if (isset($data['fecha_revocacion_ae'])) {
                 $type = AE::FINALIZED;
                 $dates['renewalMonth'] = $data['fecha_revocacion_ae'];
             }
@@ -80,7 +80,7 @@ class AeController extends Controller
                 'dates' => $dates,
             ];
 
-            //Log::info(json_encode($dates));
+            //Log::info(json_encode($data));
 
             return response()->json($response, Response::HTTP_OK);
         }
@@ -224,4 +224,21 @@ class AeController extends Controller
         return $response->body();
     }
 
+    public function fetch_end_pdf(Request $request){
+        if(Auth::check()){
+            $url = env("API_URL_AE");
+            $token = env("API_TOKEN_AE");
+            $user = Auth::user();
+            $dni = AeController::getDNI($user->cuil);
+            //Log::info(json_encode($postData));
+            $response = Http::withHeaders([
+                'API-Token' => $token,
+                'Content-Type' => 'application/json',
+            ])->get($url . '/constanciaReingreso/'. $dni);
+            Log::info(json_encode($response.data.pdf_base64));
+
+            return response()->json(["pdf_base64" => $response.data.pdf_base64]);
+        }
+
+    }
 }
