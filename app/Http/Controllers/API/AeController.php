@@ -224,6 +224,41 @@ class AeController extends Controller
         return $response->body();
     }
 
+    public function fetch_user_data(Request $request){
+        if(Auth::check()){
+            $user = Auth::user();
+            $url = env("API_URL_AE");
+            $token = env("API_TOKEN_AE");
+            $dni = AeController::getDNI($user->cuil);
+            //Log::info(json_encode($postData));
+            $response = Http::withHeaders([
+                'API-Token' => $token,
+                'Content-Type' => 'application/json',
+            ])->get($url . '/ultima/'. $dni);
+            $data = $response->json();
+            //Log::info($data);
+            return response()->json(
+                 [
+                    'cuil' => $user->cuil,
+                    'lastname' => $data['apellido'], // Acceder al apellido como elemento del array
+                    'name' => $data['nombres'], // Acceder al nombre como elemento del array
+                    'birthdate' => $data['fecha_nacimiento'], // Supongo que $ae es definido en algún lugar, de lo contrario tendrías que obtener su valor
+                    'gender' => $data['sexo'],
+                    'address' => $data['domicilio'],
+                    'nro_address' => $data['nro_domicilio'],
+                    'floor' => $data['piso'],
+                    'apartment' => $data['dpto'] === null ? "" : $data['dpto'],
+                    'postalCode' => $data['codigo_postal'],
+                    'city' => $data['nombre_localidad'],
+                    'state' => $data['nombre_provincia'],
+                    'phone' => $data['telefono'],
+                    'email' => $data['correo'], // Supongo que $ae es definido en algún lugar, de lo contrario tendrías que obtener su valor
+                    'occupation' => $data['ocupacion'],
+                    'study' => $data['capacitacion'],
+                ]);
+        }
+    }
+
     public function fetch_end_pdf(Request $request){
         if(Auth::check()){
             $url = env("API_URL_AE");
@@ -234,10 +269,10 @@ class AeController extends Controller
             $response = Http::withHeaders([
                 'API-Token' => $token,
                 'Content-Type' => 'application/json',
-            ])->get($url . '/constanciaReingreso/'. $dni);
-            Log::info(json_encode($response.data.pdf_base64));
-
-            return response()->json(["pdf_base64" => $response.data.pdf_base64]);
+            ])->get($url . '/constancia/reingreso/'. $dni);
+            //Log::info(json_encode($response.data.content));
+            $content = $response->json()["content"];
+            return response()->json(["content" => $content]);
         }
 
     }

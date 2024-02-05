@@ -26,6 +26,7 @@ Route::prefix('auth')->group(function () {
 Route::prefix('ae')->group(function () {
     Route::get('aedates', [AeController::class, 'get_calendar_dates']);
     Route::get('fetch-end-pdf', [AeController::class, 'fetch_end_pdf']);
+    Route::get('fetch-user-data', [AeController::class, 'fetch_user_data']);
     //Route::get('ae-dates', [AeController::class, 'getCalendarDates']);
     Route::post('start', [AeController::class, 'start_ae']);
     Route::post('finalize', [AeController::class, 'finalize_ae']);
