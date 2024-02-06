@@ -158,7 +158,7 @@ class AeController extends Controller
 
     }
 
-    private function start_ae(Request $request)
+    public function start_ae_n(Request $request)
     {
         $request->validate([
             'firstname' => 'required|string|max:150',
@@ -175,14 +175,35 @@ class AeController extends Controller
             'phone' => 'required|string|max:200',
             'startdate' => 'required|date',
             'occupation'        => 'nullable|string|max:4|exists:ae_ocupacion,codigo', // VER COMO HACERLO
-            'study'     => 'nullable|string|max:4|exists:ae_capacitacion,codigo',  // VER COMO HACERLO
-            //'ae_datos.estado_civil'     => 'nullable|string|max:4|exists:ae_estado_civil,codigo',  // VER COMO HACERLO
-            'renewvaldate' => 'nullable|date'
+            'study'     => 'nullable|string|max:4|exists:ae_capacitacion,codigo',  // VER COMO HACERLOO
         ]);
 
         if(Auth::check()){;
             $user = Auth::user();
             //TODO VER SI alguno tiene ya datos cargados y reutilizar si no existen
+            if ($user->name !== ($request->firstname . ", " . $request->lastname)) {
+                // El nombre cambió
+                $partes = explode(", ", $user->name);
+                $newName = $request->firstname;
+
+                if ($partes[0] !== $request->firstname) {
+                    // El primer nombre no es igual
+                    $newName = $partes[0];
+                }
+
+                // Verificar si el apellido ha cambiado
+                $newLastName = $request->lastname;
+                if (count($partes) > 1 && $partes[1] !== $request->lastname) {
+                    $newLastName = $partes[1];
+                }
+
+                // Combinar el nuevo primer nombre y el nuevo apellido
+                $newName .= ", " . $newLastName;
+
+                $user->name = $newName;
+                $user->save();
+            }
+
             $postData = [
                 'ae_datos' => [
                     'nro_dni' =>  AeController::getDNI($request->cuil),
@@ -201,7 +222,7 @@ class AeController extends Controller
                     'capacitacion' => $request->study,
                     //'estado_civil' => $request,
                     'telefono' => $request->phone,
-                    'correo' => $user->email,
+                    'correo' => $user->email, // ES EL DEL USER
                 ],
                 'ae_estado' => ['fecha_ae' => $request->startdate],
             ];

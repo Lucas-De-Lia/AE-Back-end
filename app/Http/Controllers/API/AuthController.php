@@ -93,7 +93,7 @@ class AuthController extends Controller
 
         //creo usuario
         $data = [
-            'name' => $request->firstname . " " . $request->lastname,
+            'name' => $request->firstname . ", " . $request->lastname,
             'cuil' => $request->cuil,
             'password' => Hash::make($request->password),
             'email' => $request->email,
