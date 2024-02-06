@@ -171,7 +171,7 @@ class AeController extends Controller
             'apartament' => 'nullable|string|max:5',
             'postalcode' => 'required|string|max:10',
             'city' => 'required|string|max:200',
-            'province' => 'required|string|max:200',
+            'state' => 'required|string|max:200',
             'phone' => 'required|string|max:200',
             'startdate' => 'required|date',
             'occupation'        => 'nullable|string|max:4', // VER COMO HACERLO
@@ -181,9 +181,11 @@ class AeController extends Controller
         if(Auth::check()){;
             $user = Auth::user();
             //TODO VER SI alguno tiene ya datos cargados y reutilizar si no existen
-            if ($user->name !== ($request->firstname . ", " . $request->lastname)) {
+            $newName = $request->firstname . ", " . $request->lastname;
+            if ($user->name !==$newName) {
                 // El nombre cambió
                 $partes = explode(", ", $user->name);
+                Log::info($partes);
                 $newName = $request->firstname;
 
                 if ($partes[0] !== $request->firstname) {
@@ -206,7 +208,7 @@ class AeController extends Controller
 
             $postData = [
                 'ae_datos' => [
-                    'nro_dni' =>  AeController::getDNI($request->cuil),
+                    'nro_dni' =>  AeController::getDNI($user->cuil),
                     'nombres' => $request->firstname,
                     'apellido' => $request->lastname,
                     'fecha_nacimiento' => $request->birthdate,
@@ -217,7 +219,7 @@ class AeController extends Controller
                     'dpto' => $request->apartament,
                     'codigo_postal' => $request->postalcode,
                     'nombre_localidad' => $request->city,
-                    'nombre_provincia' => $request->province,
+                    'nombre_provincia' => $request->state,
                     'ocupacion' => $request->occupation,
                     'capacitacion' => $request->study,
                     //'estado_civil' => $request,
@@ -226,7 +228,7 @@ class AeController extends Controller
                 ],
                 'ae_estado' => ['fecha_ae' => $request->startdate],
             ];
-            $response = start($postData);
+            $response = AeController::start($postData);
             return $response;
         }
     }
@@ -241,7 +243,7 @@ class AeController extends Controller
             'API-Token' => $token,
             'Content-Type' => 'application/json',
         ])->post($url . '/agregar', $postData);
-
+        Log::info($response);
         return $response->body();
     }
 
