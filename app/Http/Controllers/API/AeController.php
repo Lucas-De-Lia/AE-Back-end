@@ -174,8 +174,8 @@ class AeController extends Controller
             'province' => 'required|string|max:200',
             'phone' => 'required|string|max:200',
             'startdate' => 'required|date',
-            'occupation'        => 'nullable|string|max:4|exists:ae_ocupacion,codigo', // VER COMO HACERLO
-            'study'     => 'nullable|string|max:4|exists:ae_capacitacion,codigo',  // VER COMO HACERLOO
+            'occupation'        => 'nullable|string|max:4', // VER COMO HACERLO
+            'study'     => 'nullable|string|max:4',  // VER COMO HACERLOO
         ]);
 
         if(Auth::check()){;
