@@ -9,6 +9,10 @@ use App\Models\Question;
 use Illuminate\Http\Response;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Facades\Image;
+
 class GuestController extends Controller
 {
     public function __construct()
@@ -32,26 +36,40 @@ class GuestController extends Controller
     }
 
 
+
     public function getPdfList()
     {
         $pdfDocuments = PdfDocument::all();
+
         if ($pdfDocuments->isEmpty()) {
             return response()->json([
                 'message' => 'No PDFs found',
             ], Response::HTTP_NOT_FOUND);
         }
+
         $pdfList = $pdfDocuments->map(function ($pdfDocument) {
+            $imgPath = 'images/'. str_replace(' ', '', $pdfDocument->title). '.jpg';
+
+            if (!Storage::exists($imgPath)) {
+                $imageData = base64_decode($pdfDocument->img);
+
+                Storage::put($imgPath, $imageData);
+            }
+            $imgUrl = Storage::url($imgPath);
+
             return [
                 'id' => $pdfDocument->id,
                 'title' => $pdfDocument->title,
                 'abstract' => $pdfDocument->abstract,
-                'img' => $pdfDocument->img,
+                'img' => $imgUrl,
             ];
         })->all();
-        return response()->json(
-        $pdfList
-        , Response::HTTP_OK);
+
+        return response()->json($pdfList, Response::HTTP_OK);
     }
+
+
+
 
     public function publishPDF(Request $request)
     {
