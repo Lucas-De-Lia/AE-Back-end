@@ -10,8 +10,10 @@ use Illuminate\Http\Response;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\ImageManager;
-use Intervention\Image\Facades\Image;
+
+use Intervention\Image\Laravel\Facades\Image;
+use Intervention\Image\Decoders\FilePathImageDecoder;
+use Intervention\Image\Decoders\Base64ImageDecoder;
 
 class GuestController extends Controller
 {
@@ -35,8 +37,6 @@ class GuestController extends Controller
         }
     }
 
-
-
     public function getPdfList()
     {
         $pdfDocuments = PdfDocument::all();
@@ -48,28 +48,35 @@ class GuestController extends Controller
         }
 
         $pdfList = $pdfDocuments->map(function ($pdfDocument) {
-            $imgPath = 'images/'. str_replace(' ', '', $pdfDocument->title). '.jpg';
+            $imgPath = 'public/images/'. str_replace(' ', '', $pdfDocument->title). '.wepb';
+            $thumbnailPath = 'public/images/'. str_replace(' ', '', $pdfDocument->title). '-thubpmbnail.webp';
 
             if (!Storage::exists($imgPath)) {
                 $imageData = base64_decode($pdfDocument->img);
-
                 Storage::put($imgPath, $imageData);
+                GuestController::createLowResImage($pdfDocument->img, $thumbnailPath, 50, 400);
             }
             $imgUrl = Storage::url($imgPath);
-
+            $thumbnailUrl = Storage::url($thumbnailPath);
             return [
                 'id' => $pdfDocument->id,
                 'title' => $pdfDocument->title,
                 'abstract' => $pdfDocument->abstract,
                 'img' => $imgUrl,
+                'thumbnail'=> $thumbnailUrl
             ];
         })->all();
 
         return response()->json($pdfList, Response::HTTP_OK);
     }
 
-
-
+    public function createLowResImage($sourceImagePath, $destinationImagePath, $quality = 50, $width = 100, $height = null)
+    {
+        $image = Image::read($sourceImagePath,[Base64ImageDecoder::class, FilePathImageDecoder::class]);
+        $image->scaleDown(width: $width);
+        //$image->save($destinationImagePath, $quality);
+        Storage::put($destinationImagePath, $image->encode());
+    }
 
     public function publishPDF(Request $request)
     {

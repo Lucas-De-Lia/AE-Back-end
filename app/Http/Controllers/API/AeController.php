@@ -253,13 +253,21 @@ class AeController extends Controller
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");
             $dni = AeController::getDNI($user->cuil);
-            //Log::info(json_encode($postData));
-            $response = Http::withHeaders([
-                'API-Token' => $token,
-                'Content-Type' => 'application/json',
-            ])->get($url . '/ultima/'. $dni);
-            $data = $response->json();
-            //Log::info($data);
+            try {
+                $response = Http::withHeaders([
+                    'API-Token' => $token,
+                    'Content-Type' => 'application/json',
+                ])->get($url . '/ultima/'. $dni);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+                } else {
+                    throw new Exception("Error al obtener los datos: " . $response->status());
+                }
+            } catch (Exception $e) {
+                Log::error("Error al hacer la solicitud HTTP: " . $e->getMessage());
+                return response()->json(['error' => 'Ha ocurrido un error al obtener los datos.'], 500);
+            }
             return response()->json(
                  [
                     'cuil' => $user->cuil,
@@ -276,8 +284,8 @@ class AeController extends Controller
                     'state' => $data['nombre_provincia'],
                     'phone' => $data['telefono'],
                     'email' => $data['correo'], // Supongo que $ae es definido en algún lugar, de lo contrario tendrías que obtener su valor
-                    'occupation' => $data['ocupacion'],
-                    'study' => $data['capacitacion'],
+                    'occupation' =>  $data['ocupacion'] === null ? "" : $data['ocupacion'],
+                    'study' =>  $data['capacitacion'] === null ? "" : $data['capacitacion'],
                 ]);
         }
     }
