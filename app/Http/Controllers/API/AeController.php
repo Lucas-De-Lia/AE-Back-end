@@ -307,4 +307,22 @@ class AeController extends Controller
         }
 
     }
+
+    public function fetch_start_pdf(Request $request){
+        if(Auth::check()){
+            $url = env("API_URL_AE");
+            $token = env("API_TOKEN_AE");
+            $user = Auth::user();
+            $dni = AeController::getDNI($user->cuil);
+            //Log::info(json_encode($postData));
+            $response = Http::withHeaders([
+                'API-Token' => $token,
+                'Content-Type' => 'application/json',
+            ])->get($url . '/constancia/alta/'. $dni);
+            Log::info(json_encode($response));
+            $content = $response->json()["content"];
+            return response()->json(["content" => $content]);
+        }
+
+    }
 }
