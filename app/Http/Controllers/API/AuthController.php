@@ -224,21 +224,26 @@ class AuthController extends Controller
         if (Auth::check()) {
             $user = Auth::user();
             $emailToVerify = $user->emailToVerify;
-            if($emailToVerify === null){
-                // no existe una verifycacion de email para este email o ya se verifico o nunca se creo la verificacion para este.
-                return response()->json(['error' => 'Email already verified'], Response::HTTP_BAD_REQUEST);
-            }
-            if ($code == $emailToVerify->code) {
-                if ($request->user()->markEmailAsVerified()) {
-                    $user->email = $emailToVerify->email;
-                    $emailToVerify->delete();
-                    $user->save();
-                    //event(new Verified($user));
-                    return response()->json(['message' => 'Email verified'], Response::HTTP_OK);
-                }
-            } else {
+
+            if (!$emailToVerify || $emailToVerify->code !== $request->code) {
                 return response()->json(['error' => 'Invalid code'], Response::HTTP_BAD_REQUEST);
             }
+
+            $expirationTime = now()->subMinutes(5);
+            if ($emailToVerify->updated_at>lt($expirationTime)) {
+                return response()->json(['error' => 'Verification code has expired'], Response::HTTP_BAD_REQUEST);
+            }
+
+            if ($request->user()->markEmailAsVerified()) {
+                $user->email = $emailToVerify->email;
+                $emailToVerify->delete();
+                $user->save();
+                //event(new Verified($user));
+                return response()->json(['message' => 'Email verified'], Response::HTTP_OK);
+            }else {
+                return response()->json(['error' => 'Failed to mark email as verified'], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+
         } else {
             return response()->json(['error' => 'Unauthenticated'], Response::HTTP_UNAUTHORIZED);
         }
@@ -279,27 +284,30 @@ class AuthController extends Controller
 
     public function forgot_password(Request $request)
     {
-        $request->validate(['email' => 'required|email']);
+        $request->validate([ 'email' => 'required|exists:users,email','cuil' => [
+                'required',
+                'string',
+                'regex:/^\d{2}-\d{8}-\d{1}$/',
+                'exists:users,cuil'
+               ]]);
 
-        $status = Password::sendResetLink($request->only('email'));
+        $user = User::where('cuil', $request->cuil)->first();
 
-        return $status === Password::RESET_LINK_SENT ? response()->json(['status' => __($status)]) : response()->json(['status' => 'Password reset email send error']);
+        // Check if the user exists and the provided email matches
+        if ($user && $user->email === $request->email) {
+            // Generate a random password
+            $password = Str::random(20);
+
+            // Update user's password
+            $user->password = Hash::make($password);
+            $user->save();
+
+            // Send email with the new password
+            Mail::to($user->email)->send(new RandomPasswordMail($user->name, $password));
+            return response()->json(['message' => 'Password reset successful. Check your email.'], Response::HTTP_OK);
+        } else {
+            return response()->json(['message' => 'Invalid email or cuil provided.'], Response::HTTP_BAD_REQUEST);
     }
-
-    public function reset_password(Request $request)
-    {
-        $request->validate(['token' => 'required', 'email' => 'required|email', 'password' => 'required|min:8|confirmed']);
-
-        $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function (User $user, string $password) {
-                $user->forceFIll(['password' => Hash::make($password)]);
-                $user->save();
-                event(new PasswordReset(($user)));
-            }
-
-        );
-        return $status === Password::PASSWORD_RESET ? response()->json(['status' => __($status)]) : response()->json(['status' => 'Password reset error']);
     }
 
     public function change_password(Request $request)
