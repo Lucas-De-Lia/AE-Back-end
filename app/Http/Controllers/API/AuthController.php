@@ -24,9 +24,9 @@ class AuthController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('throttle:api');
+        $this->middleware('throttle:api'); // throttle , mata las peticiones de cualquier usuario que quiera colmar el server de consultas, si mal no recuerdo eran 100 request/min el maximo permitido.
         $this->middleware(['verified'], ['except' => ['login', 'register', 'email_send_code', 'verify_code_email','verify_link_email']]);
-        $this->middleware(['auth:sanctum'], ['except' => ['login', 'register','verify_link_email']]);
+        $this->middleware(['auth:sanctum'], ['except' => ['login', 'register','verify_link_email','forgot_password','reset_password']]);
         //$this->middleware(['signed'], ['except' => ['login', 'register', 'logout', 'refresh']]);
     }
 
@@ -62,6 +62,7 @@ class AuthController extends Controller
         ], Response::HTTP_UNAUTHORIZED);
     }
 
+    // Esta parte es el registro
     public function register(Request $request)
     {
         $request->validate([
@@ -170,6 +171,8 @@ class AuthController extends Controller
     }
 
 
+    //Envio de codigos de verificacion
+    // Crea una peticion de cambio de email , enviandole un mail a la nueva direccion. (esto es si el usuario esta logeado y registrado)
     public function email_send_code(Request $request)
     {
         $request->validate([
@@ -201,7 +204,7 @@ class AuthController extends Controller
                     // El usuario ya tiene un modelo EmailToVerify asociado.
                     $emailToVerify = $user->emailToVerify;
                     $emailToVerify->email = $request->email; ;
-                    $emailToVerify->code = self::str_random(6);
+                    $emailToVerify->code = self::str_random(10);
                     $emailToVerify->save();
                 }
 
@@ -216,10 +219,10 @@ class AuthController extends Controller
             'message' => 'Unauthenticated',
         ], Response::HTTP_UNAUTHORIZED);
     }
-
+    // verifica el email con el codigo obtenido.
     public function verify_code_email(Request $request)
     {
-        $request->validate(['code' => 'required|regex:/^[A-Z0-9]{6}$/', 'email' => 'required|string|email|max:255']);
+        $request->validate(['code' => 'required|regex:/^[A-Z0-9]{10}$/', 'email' => 'required|string|email|max:255']);
         $code = $request->code;
         if (Auth::check()) {
             $user = Auth::user();
@@ -230,7 +233,7 @@ class AuthController extends Controller
             }
 
             $expirationTime = now()->subMinutes(5);
-            if ($emailToVerify->updated_at>lt($expirationTime)) {
+            if ($emailToVerify->updated_at < $expirationTime) {
                 return response()->json(['error' => 'Verification code has expired'], Response::HTTP_BAD_REQUEST);
             }
 
@@ -248,7 +251,7 @@ class AuthController extends Controller
             return response()->json(['error' => 'Unauthenticated'], Response::HTTP_UNAUTHORIZED);
         }
     }
-
+    //esta verificacion hace lo mismo pero envia un link ( esta es para el registro )
     public function verify_link_email(Request $request)
     {
         $request->validate([
@@ -282,34 +285,75 @@ class AuthController extends Controller
 
     }
 
+
+    // genera una peticion de cambio de contraseña , solo 1 cada 3 minutos
     public function forgot_password(Request $request)
     {
-        $request->validate([ 'email' => 'required|exists:users,email','cuil' => [
+        $request->validate([
+            'cuil' => [
                 'required',
                 'string',
                 'regex:/^\d{2}-\d{8}-\d{1}$/',
                 'exists:users,cuil'
-               ]]);
+            ]
+        ]);
 
         $user = User::where('cuil', $request->cuil)->first();
 
-        // Check if the user exists and the provided email matches
-        if ($user && $user->email === $request->email) {
-            // Generate a random password
-            $password = Str::random(20);
+        if (!$user) {
+            return response()->json(['message' => 'Invalid cuil provided.'], Response::HTTP_BAD_REQUEST);
+        }
 
-            // Update user's password
-            $user->password = Hash::make($password);
-            $user->save();
+        if ($user->forgotpassword && $user->forgotpassword->created_at->gt(now()->subMinutes(5))) {
+            return response()->json(['message' => 'Wait 5 minutes and try again'], Response::HTTP_BAD_REQUEST);
+        }
 
-            // Send email with the new password
-            Mail::to($user->email)->send(new RandomPasswordMail($user->name, $password));
-            return response()->json(['message' => 'Password reset successful. Check your email.'], Response::HTTP_OK);
-        } else {
-            return response()->json(['message' => 'Invalid email or cuil provided.'], Response::HTTP_BAD_REQUEST);
+        $TOKEN = Str::random(20);
+        $passwordReset = $user->forgotpassword()->updateOrCreate(
+            ['email' => $request->email],
+            ['token' => Hash::make($TOKEN)]
+        );
+
+        // Send email with the new password
+        Mail::to($user->email)->send(new ForgotPassMail($user->name, $TOKEN));
+
+        return response()->json(['message' => 'Password reset successful. Check your email.'], Response::HTTP_OK);
     }
-    }
+    // el commit de la peticion de cambio de contraseña , asigna la nueva y borra la paticion.
+    public function reset_password(Request $request)
+    {
+        $request->validate([
+            'cuil' => 'required|email|exists:users,email',
+            'token' => 'required|string',
+            'password' => 'required|string'
+        ]);
 
+        $user = User::where('cuil', $request->email)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $passwordReset = $user->forgotpassword();
+
+        if (!$passwordReset) {
+            return response()->json(['message' => 'Password reset token not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        if (!Hash::check($request->token, $passwordReset->token)) {
+            return response()->json(['message' => 'Invalid token.'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        // Update user's password
+        $user->password = Hash::make($$request->password);
+        $user->save();
+
+        // Delete the password reset token
+        $passwordReset->delete();
+
+        return response()->json(['message' => 'Password reset successful. Check your email for the new password.'], Response::HTTP_OK);
+    }
+    //Change password , si estas logado y conoces tu  ocntraseña anterior
     public function change_password(Request $request)
     {
         $request->validate([

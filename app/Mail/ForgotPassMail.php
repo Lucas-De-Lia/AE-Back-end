@@ -9,18 +9,17 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class ConfirmationLink extends Mailable
+class ForgotPassMail extends Mailable
 {
     use Queueable, SerializesModels;
 
     /**
      * Create a new message instance.
      */
-    public function __construct($name, $id, $code)
+    public function __construct(string $Token, string $name)
     {
+        $this->token = $token;
         $this->username = $name;
-        $this->id_verf = $id;
-        $this->code = $code;
     }
 
     /**
@@ -29,7 +28,7 @@ class ConfirmationLink extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Mail de Verificacion',
+            subject: 'Recuperacion de Acceso: ¡Importante!',
         );
     }
 
@@ -39,8 +38,8 @@ class ConfirmationLink extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.verifylink',
-            with: ['username' => $this->username, 'id' => $this->id_verf,'hash' => $this->code],
+            view: 'emails.forgotpassword',
+            with: ['confirmation_code' => $this->token, 'username' => $this->username],
         );
     }
 

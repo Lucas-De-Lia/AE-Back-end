@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use \App\Notifications\CustomVerifyEmail;
 use App\Models\EmailToVerify;
+use App\Models\PasswordResets;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -19,11 +20,17 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasOne(EmailToVErify::class);
     }
+
+    public function forgotpassword(){
+        return $this->hasOne(PasswordResets::class);
+    }
+
     /**
      * The attributes that are mydatabasemass assignable.
      *
      * @var array<int, string>
      */
+
     protected $fillable = [
         'name',
         'cuil',

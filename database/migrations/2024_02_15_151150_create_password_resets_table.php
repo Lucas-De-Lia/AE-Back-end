@@ -14,8 +14,10 @@ return new class extends Migration
         Schema::create('password_resets', function (Blueprint $table) {
             $table->id();
             $table->string('email')->unique();
-            $table->string('token');
+            $table->string('code');
+            $table->unsignedBigInteger('user_id');
             $table->timestamps();
+            $table->unique(['user_id', 'email']);
         });
     }
 
