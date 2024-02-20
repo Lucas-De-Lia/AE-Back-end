@@ -18,16 +18,26 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 
 class AuthController extends Controller
 {
+    /**
+     * Create a new controller instance.
+     *
+     * @return void
+     */
     public function __construct()
     {
-        $this->middleware('throttle:api'); // throttle , mata las peticiones de cualquier usuario que quiera colmar el server de consultas, si mal no recuerdo eran 100 request/min el maximo permitido.
-        $this->middleware(['verified'], ['except' => ['login', 'register', 'email_send_code', 'verify_code_email','verify_link_email']]);
-        $this->middleware(['auth:sanctum'], ['except' => ['login', 'register','verify_link_email','forgot_password','reset_password']]);
-        //$this->middleware(['signed'], ['except' => ['login', 'register', 'logout', 'refresh']]);
+        // Rate limit the number of requests from any user to prevent server overload, with a maximum of 100 requests per minute.
+        $this->middleware('throttle:api');
+
+        // Apply 'verified' middleware to all methods except the specified ones.
+        $this->middleware(['verified'], ['except' => ['login', 'register', 'email_send_code', 'verify_code_email', 'verify_link_email']]);
+
+        // Apply 'auth:sanctum' middleware to all methods except the specified ones.
+        $this->middleware(['auth:sanctum'], ['except' => ['login', 'register', 'verify_link_email', 'forgot_password', 'reset_password']]);
     }
 
     public function login(Request $request)
@@ -37,19 +47,13 @@ class AuthController extends Controller
             'password' => 'required|string'
         ]);
 
-        $credentials = $request->only(['cuil', 'password']);
-
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
+        if (Auth::attempt($request->only(['cuil', 'password']))) {
+            $user = $request->user();
             $user->tokens()->delete();
             $token = $user->createToken('token-name')->plainTextToken;
-            //Mail::to($user->email)->send(new ConfirmationCode("2131", "name"));
+
             return response()->json([
-                'user' => [
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'cuil' => $user->cuil
-                ],
+                'user' => $user->only(['name', 'email', 'cuil']),
                 'authorization' => [
                     'token' => $token,
                     'type' => 'Bearer ',
@@ -57,25 +61,32 @@ class AuthController extends Controller
                 ]
             ], Response::HTTP_CREATED);
         }
+
         return response()->json([
             'message' => 'Invalid credentials',
         ], Response::HTTP_UNAUTHORIZED);
     }
 
-    // Esta parte es el registro
+    /**
+     * Register a new user
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function register(Request $request)
     {
+        // Validate the incoming request data
         $request->validate([
             'cuil' => [
                 'required',
                 'string',
                 'unique:users',
                 'regex:/^\d{2}-\d{8}-\d{1}$/',
-               ],
+            ],
             'firstname' => 'required|string|max:150',
             'lastname' => 'required|string|max:100',
             'birthdate' => 'required|date',
-            'gender' => 'required', //ver como hacerlo
+            'gender' => 'required', // Consider providing more specific validation
             'address' => 'required|string|max:100',
             'address_number' => 'required|integer',
             'floor' => 'nullable|string|max:5',
@@ -85,41 +96,54 @@ class AuthController extends Controller
             'province' => 'required|string|max:200',
             'phone' => 'required|string|max:200',
             'startdate' => 'required|date',
-            'occupation'        => 'nullable|string|max:4', // VER COMO HACERLO
-            'study'     => 'nullable|string|max:4',  // VER COMO HACERLO
+            'occupation' => 'nullable|string|max:4', // Consider providing more specific validation
+            'study' => 'nullable|string|max:4',  // Consider providing more specific validation
             'email' => 'required|string|email|max:255|unique:users|unique:email_to_verify',
             'password' => 'required|string|min:8',
             'renewvaldate' => 'nullable|date'
         ]);
 
-        //creo usuario
+        // Create user data
         $data = [
-            'name' => $request->firstname . ", " . $request->lastname,
+            'name' => implode(', ', [$request->firstname, $request->lastname]),
             'cuil' => $request->cuil,
             'password' => Hash::make($request->password),
             'email' => $request->email,
         ];
 
-        $user = User::create($data);
+        // Begin a database transaction
+        DB::beginTransaction();
+        try {
+            // Create a new user
+            $user = User::create($data);
 
-        // creo abst de emailverify
+            // Create a new email verification record
+            $emailToVerify = new EmailToVerify([
+                'email' => $request->email,
+                'code' => self::str_random(10),
+            ]);
+            $user->emailToVerify()->save($emailToVerify);
 
-        $emailToVerify = new EmailToVerify([
-        'email' => $request->email,
-        'code' => self::str_random(10),
-        ]);
-        $user->emailToVerify()->save($emailToVerify);
+            // Send the verification email
+            Mail::to($request->email)->send(new ConfirmationLink($user->name, $emailToVerify->id, $emailToVerify->code));
 
-        //envio el mail de verificacion
-        Mail::to($request->email)->send(new ConfirmationLink($user->name,$emailToVerify->id,  $emailToVerify->code));
+            // Register an AE (whatever that stands for) - consider providing more information in the comment
+            $ae = AeController::register_ae($request);
 
-        $ae = AeController::register_ae($request);
-        //send verify email but with other function
-        return response()->json([
-            'message' => 'User created successfully',
-            'user' => $user,
-            'ae' =>  $ae
-        ], Response::HTTP_CREATED);
+            // Commit the database transaction
+            DB::commit();
+
+            // Return a JSON response
+            return response()->json([
+                'message' => 'User created successfully',
+                'user' => $user,
+                'ae' =>  $ae->body()
+            ], Response::HTTP_CREATED);
+        } catch (\Exception $e) {
+            // Rollback the database transaction and return an error response
+            DB::rollback();
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     public function logout()
@@ -171,53 +195,52 @@ class AuthController extends Controller
     }
 
 
-    //Envio de codigos de verificacion
-    // Crea una peticion de cambio de email , enviandole un mail a la nueva direccion. (esto es si el usuario esta logeado y registrado)
+    /**
+     * Validate the request data and send a verification code to the provided email address.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function email_send_code(Request $request)
     {
+        // Validate the request data
         $request->validate([
             'email' => 'required|string|email|max:255',
             'password' => 'required|string'
         ]);
-        if (Auth::check()) {
-            $user = Auth::user();
-            if (Hash::check($request->input('password'), $user->password)) {
 
-                $existingUser = User::where('email', $request->email)->first();
+        // Get the authenticated user
+        $user = Auth::user();
 
-                if ($existingUser && $existingUser->id !== $user->id) {
-                    // Esto sirve tanto si el email es de otro como si es del mismo usuarios
-                    return response()->json([
-                        'message' => 'Email already registered',
-                    ], Response::HTTP_CONFLICT);
-                }
-
-
-                if (!$user->emailToVerify) {
-                    // no tiene
-                    $emailToVerify = new EmailToVerify([
-                    'email' => $request->email,
-                    'code' => self::str_random(10),
-                    ]);
-                    $user->emailToVerify()->save($emailToVerify);
-                } else {
-                    // El usuario ya tiene un modelo EmailToVerify asociado.
-                    $emailToVerify = $user->emailToVerify;
-                    $emailToVerify->email = $request->email; ;
-                    $emailToVerify->code = self::str_random(10);
-                    $emailToVerify->save();
-                }
-
-                Mail::to($request->email)->send(new ConfirmationCode($emailToVerify->code, $user->name));
-
-                return response()->json([
-                    'message' => 'Email sent',
-                ], Response::HTTP_OK);
-            }
+        // Check if the user is not authenticated or the password is incorrect
+        if (!$user || !Hash::check($request->input('password'), $user->password)) {
+            return response()->json([
+                'message' => 'Unauthenticated',
+            ], Response::HTTP_UNAUTHORIZED);
         }
+
+        // Check if the email is already registered for another user
+        $existingUser = User::where('email', $request->email)->where('id', '!=', $user->id)->first();
+
+        if ($existingUser) {
+            return response()->json([
+                'message' => 'Email already registered',
+            ], Response::HTTP_CONFLICT);
+        }
+
+        // Create or update the email verification code for the user
+        $emailToVerify = $user->emailToVerify ?? new EmailToVerify;
+        $emailToVerify->email = $request->email;
+        $emailToVerify->code = self::str_random(10);
+        $user->emailToVerify()->save($emailToVerify);
+
+        // Send the verification code to the provided email address
+        Mail::to($request->email)->send(new ConfirmationCode($emailToVerify->code, $user->name));
+
+        // Return a success response
         return response()->json([
-            'message' => 'Unauthenticated',
-        ], Response::HTTP_UNAUTHORIZED);
+            'message' => 'Email sent',
+        ], Response::HTTP_OK);
     }
     // verifica el email con el codigo obtenido.
     public function verify_code_email(Request $request)
@@ -303,8 +326,8 @@ class AuthController extends Controller
         if (!$user) {
             return response()->json(['message' => 'Invalid cuil provided.'], Response::HTTP_BAD_REQUEST);
         }
-
-        if ($user->forgotpassword && $user->forgotpassword->created_at->gt(now()->subMinutes(5))) {
+        $expirationTime = now()->subMinutes(5);
+        if ($user->forgotpassword && $user->forgotpassword->created_at > $expirationTime) {
             return response()->json(['message' => 'Wait 5 minutes and try again'], Response::HTTP_BAD_REQUEST);
         }
 

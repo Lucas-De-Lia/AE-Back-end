@@ -236,15 +236,11 @@ class AeController extends Controller
     public static function start($postData){
         $url = env("API_URL_AE");
         $token = env("API_TOKEN_AE");
-
-        //Log::info(json_encode($postData));
-
         $response = Http::withHeaders([
             'API-Token' => $token,
             'Content-Type' => 'application/json',
         ])->post($url . '/agregar', $postData);
-        Log::info($response);
-        return $response->body();
+        return $response;
     }
 
     public function fetch_user_data(Request $request){
