@@ -34,9 +34,9 @@ Route::prefix('ae')->group(function () {
 });
 
 Route::prefix('resources')->group(function () {
-    Route::post('publishpdf', [GuestController::class, 'publishPDF']);
-    Route::post('getpdf', [GuestController::class, 'getPdf']);
+    Route::post('upload-pdf-document', [GuestController::class, 'uploadPdfDocument']);
+    //Route::post('getpdf', [GuestController::class, 'getPdf']);
 
-    Route::get('getpdflist', [GuestController::class, 'getPdfList']);
+    //Route::get('getpdflist', [GuestController::class, 'getPdfList']);
     Route::get('getQuestions', [GuestController::class, 'getQuestionList']);
 });

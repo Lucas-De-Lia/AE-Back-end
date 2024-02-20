@@ -4,14 +4,15 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\PdfDocument;
+use App\Models\PdfFile;
+use App\Models\Image;
+use App\Models\News;
 use App\Models\Question;
 use Illuminate\Http\Response;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-
-use Intervention\Image\Laravel\Facades\Image;
+use Intervention\Image\Laravel\Facades\Image as ImageIntervention;
 use Intervention\Image\Decoders\FilePathImageDecoder;
 use Intervention\Image\Decoders\Base64ImageDecoder;
 
@@ -21,6 +22,7 @@ class GuestController extends Controller
     {
         $this->middleware('throttle:api');
     }
+    /*
     public function getPdf(Request $request)
     {
         $request->validate([
@@ -77,35 +79,45 @@ class GuestController extends Controller
         //$image->save($destinationImagePath, $quality);
         Storage::put($destinationImagePath, $image->encode());
     }
-
-    public function publishPDF(Request $request)
+    */
+    public function uploadPdfDocument(Request $request)
     {
         $request->validate([
-            'title' => 'required|string|max:255',
+            'title' => 'required|string',
             'abstract' => 'required|string',
-            'img' => 'required',
-            'content' => 'required',
+            'pdf' => 'required|mimes:pdf|max:2048', // Validar que el archivo sea un PDF válido
+            'image' => 'required|image|mimes:webp|max:2048', // Validar que el archivo sea una imagen válida
         ]);
-        try {
-            $pdf = PdfDocument::create([
-                'title' => $request->input('title'),
-                'abstract' => $request->input('abstract'),
-                'img' => $request->input('img'),
-                'content' => $request->input('content'),
-            ]);
-            return response()->json([
-                'id' => $pdf->id,
-                'title' => $pdf->title,
-                'abstract' => $pdf->abstract,
-                'content' => $pdf->content,
-                'created_at' => $pdf->created_at,
-                'msg' => 'PDF has been created successfully',
-            ], Response::HTTP_CREATED);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to create PDF'], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
+        //return response()->json(['message' => 'PDF uploaded successfully'], Response::HTTP_OK);
 
+        DB::beginTransaction();
+        try{
+            // Create a new News
+            $news = new News();
+            $news->title = $request->title;
+            $news->abstract = $request->abstract;
+            $news->save();
+
+            $image= $request->file('image');
+            $imagenPath = $image->store('images');
+            $imageModel = Image::create(['url' => $imagenPath]);
+            $news->imagen()->save($imageModel);
+
+            $pdfFile = $request->file('pdf');
+            $pdfPath= $pdfFile->store('pdfs');
+            $pdfModel = PdfFile::create(['file_path' => $pdfPath]);
+            $pdf->pdf()->save($pdfModel);
+
+            $news->save();
+            DB::commit();
+            return response()->json(['message' => 'PDF uploaded successfully'], Response::HTTP_OK);
+
+        }catch(\Exception $e){
+            DB::rollback();
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+
+    }
     public function getQuestionList()
     {
         $questions = Question::all();
