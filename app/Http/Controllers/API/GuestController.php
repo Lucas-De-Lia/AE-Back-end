@@ -22,101 +22,51 @@ class GuestController extends Controller
     {
         $this->middleware('throttle:api');
     }
-    /*
-    public function getPdf(Request $request)
-    {
-        $request->validate([
-            'id' => 'required',
-        ]);
 
-        try {
-            $pdfDocument = PdfDocument::findOrFail($request->id);
-            return response()->json($pdfDocument, Response::HTTP_OK);
-        } catch (ModelNotFoundException $e) {
-            return response()->json([
-                'message' => 'PDF not found',
-            ], Response::HTTP_NOT_FOUND);
-        }
-    }
-
-    public function getPdfList()
-    {
-        $pdfDocuments = PdfDocument::all();
-
-        if ($pdfDocuments->isEmpty()) {
-            return response()->json([
-                'message' => 'No PDFs found',
-            ], Response::HTTP_NOT_FOUND);
-        }
-
-        $pdfList = $pdfDocuments->map(function ($pdfDocument) {
-            $imgPath = 'public/images/'. str_replace(' ', '', $pdfDocument->title). '.wepb';
-            $thumbnailPath = 'public/images/'. str_replace(' ', '', $pdfDocument->title). '-thubpmbnail.webp';
-
-            if (!Storage::exists($imgPath)) {
-                $imageData = base64_decode($pdfDocument->img);
-                Storage::put($imgPath, $imageData);
-                GuestController::createLowResImage($pdfDocument->img, $thumbnailPath, 50, 400);
-            }
-            $imgUrl = Storage::url($imgPath);
-            $thumbnailUrl = Storage::url($thumbnailPath);
-            return [
-                'id' => $pdfDocument->id,
-                'title' => $pdfDocument->title,
-                'abstract' => $pdfDocument->abstract,
-                'img' => $imgUrl,
-                'thumbnail'=> $thumbnailUrl
-            ];
-        })->all();
-
-        return response()->json($pdfList, Response::HTTP_OK);
-    }
-
-    public function createLowResImage($sourceImagePath, $destinationImagePath, $quality = 50, $width = 100, $height = null)
-    {
-        $image = Image::read($sourceImagePath,[Base64ImageDecoder::class, FilePathImageDecoder::class]);
-        $image->scaleDown(width: $width);
-        //$image->save($destinationImagePath, $quality);
-        Storage::put($destinationImagePath, $image->encode());
-    }
-    */
+    /**
+     * Uploads a PDF document along with its title and abstract, and an image.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function uploadPdfDocument(Request $request)
     {
+        // Validate the incoming request data
         $request->validate([
             'title' => 'required|string',
             'abstract' => 'required|string',
-            'pdf' => 'required|mimes:pdf|max:2048', // Validar que el archivo sea un PDF válido
-            'image' => 'required|image|mimes:webp|max:2048', // Validar que el archivo sea una imagen válida
+            'pdf' => 'required|mimes:pdf|max:2048', // Validate that the file is a valid PDF
+            'image' => 'required|image|mimes:webp|max:2048', // Validate that the file is a valid image
         ]);
-        //return response()->json(['message' => 'PDF uploaded successfully'], Response::HTTP_OK);
 
+        // Start a database transaction
         DB::beginTransaction();
         try{
-            // Create a new News
-            $news = new News();
-            $news->title = $request->title;
-            $news->abstract = $request->abstract;
-            $news->save();
+            // Create a new news entry with the provided title and abstract
+            $news = News::create([
+                'title' => $request->title,
+                'abstract' => $request->abstract,
+            ]);
 
-            $image= $request->file('image');
-            $imagenPath = $image->store('images');
-            $imageModel = Image::create(['url' => $imagenPath]);
-            $news->imagen()->save($imageModel);
+            // Store the uploaded image and associate it with the news entry
+            $image = $request->file('image')->store('public/images');
+            $news->image()->create(['url' =>  str_replace('public/', 'storage/', $image)]);
 
-            $pdfFile = $request->file('pdf');
-            $pdfPath= $pdfFile->store('pdfs');
-            $pdfModel = PdfFile::create(['file_path' => $pdfPath]);
-            $pdf->pdf()->save($pdfModel);
-
-            $news->save();
+            // Store the uploaded PDF and associate it with the news entry
+            $pdf = $request->file('pdf')->store('public/pdfs');
+            $news->pdfFile()->create([
+                'title' => $request->title,
+                'file_path' => str_replace('public/', 'storage/', $pdf)
+            ]);
+            // Commit the transaction and return a success response
             DB::commit();
             return response()->json(['message' => 'PDF uploaded successfully'], Response::HTTP_OK);
 
         }catch(\Exception $e){
+            // Roll back the transaction and return an error response
             DB::rollback();
             return response()->json(['error' => $e->getMessage()], 500);
         }
-
     }
     public function getQuestionList()
     {
@@ -125,5 +75,45 @@ class GuestController extends Controller
         return $questions->isEmpty()
             ? response()->json(['message' => 'No questions found'], Response::HTTP_NOT_FOUND)
             : response()->json($questions, Response::HTTP_OK);
+    }
+
+    /**
+     * Get the list of news articles.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getNewsList()
+    {
+        // Retrieve all news articles and map them to a new format
+        $newsList = News::all()->map(function ($news) {
+            return [
+                'id' => $news->id,
+                'title' => $news->title,
+                'image' => "/".$news->image->url,
+                'abstract' => $news->abstract
+            ];
+        })->all();
+
+        // Return the news list as a JSON response
+        return response()->json($newsList, Response::HTTP_OK);
+    }
+    public function getNewsPdf(Request $request)
+    {
+        $request->validate([
+            'id' => 'required',
+        ]);
+
+        try {
+            $newss = News::findOrFail($request->id);
+            return response()->json ([
+                'id' => $newss->id,
+                'title' => $newss->title,
+                'pdf' => "/". $newss->pdfFile->file_path,
+            ], Response::HTTP_OK);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'PDF not found',
+            ], Response::HTTP_NOT_FOUND);
+        }
     }
 }

@@ -17,7 +17,7 @@ class News extends Model
         'abstract'
     ];
 
-    public function imagen(){
+    public function image(){
         return $this->hasOne(Image::class);
     }
 
