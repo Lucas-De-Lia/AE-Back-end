@@ -34,7 +34,7 @@ class AuthController extends Controller
         $this->middleware('throttle:api');
 
         // Apply 'verified' middleware to all methods except the specified ones.
-        $this->middleware(['verified'], ['except' => ['login', 'register', 'email_send_code', 'verify_code_email', 'verify_link_email']]);
+        $this->middleware(['verified'], ['except' => ['login', 'logout', 'register', 'email_send_code', 'verify_code_email', 'verify_link_email']]);
 
         // Apply 'auth:sanctum' middleware to all methods except the specified ones.
         $this->middleware(['auth:sanctum'], ['except' => ['login', 'register', 'verify_link_email', 'forgot_password', 'reset_password']]);
