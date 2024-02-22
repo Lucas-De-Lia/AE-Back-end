@@ -265,7 +265,7 @@ class AuthController extends Controller
                 $emailToVerify->delete();
                 $user->save();
                 //event(new Verified($user));
-                return response()->json(['message' => 'Email verified'], Response::HTTP_OK);
+                return response()->json(['message' => 'Confirmation successful'], Response::HTTP_OK);
             }else {
                 return response()->json(['error' => 'Failed to mark email as verified'], Response::HTTP_INTERNAL_SERVER_ERROR);
             }
