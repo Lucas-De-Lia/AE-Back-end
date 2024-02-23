@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
-
+use Exception;
 class AE {
     const NON_AE = -1;
     const FINALIZED = 0;

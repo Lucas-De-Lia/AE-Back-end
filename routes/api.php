@@ -21,7 +21,7 @@ Route::prefix('auth')->group(function () {
 
     Route::post('/forgot-password', [AuthController::class, 'forgot_password']);
     Route::post('/reset-password', [AuthController::class, 'reset_password']);
-    Route::post('/change_password', [AuthController::class, 'change_password']);
+    Route::post('/change-password', [AuthController::class, 'change_password']);
 });
 
 Route::prefix('ae')->group(function () {

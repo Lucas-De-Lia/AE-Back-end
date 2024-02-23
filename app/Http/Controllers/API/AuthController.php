@@ -307,8 +307,6 @@ class AuthController extends Controller
         return response()->json(['error' => 'Email verification failed'], Response::HTTP_INTERNAL_SERVER_ERROR);
 
     }
-
-
     // genera una peticion de cambio de contraseña , solo 1 cada 3 minutos
     public function forgot_password(Request $request)
     {
@@ -392,7 +390,7 @@ class AuthController extends Controller
                 'password' => Hash::make($request->input('new_password')),
             ]);
             $user->save();
-            Auth::logout();
+            //Auth::logout();
             $user->tokens()->delete();
             return response()->json(['message' => 'Password changed successfully'], Response::HTTP_OK);
         }
