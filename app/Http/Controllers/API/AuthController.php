@@ -20,6 +20,12 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\Decoders\FilePathImageDecoder;
+use Intervention\Image\Decoders\DataUriImageDecoder;
+use Intervention\Image\Decoders\Base64ImageDecoder;
+use Intervention\Image\Encoders\WebpEncoder;
 
 class AuthController extends Controller
 {
@@ -34,10 +40,10 @@ class AuthController extends Controller
         $this->middleware('throttle:api');
 
         // Apply 'verified' middleware to all methods except the specified ones.
-        $this->middleware(['verified'], ['except' => ['login', 'logout', 'register', 'email_send_code', 'verify_code_email', 'verify_link_email']]);
+        $this->middleware(['verified'], ['except' => ['login', 'logout', 'register', 'email_send_code', 'verify_code_email', 'verify_link_email','merge_dni_photos']]);
 
         // Apply 'auth:sanctum' middleware to all methods except the specified ones.
-        $this->middleware(['auth:sanctum'], ['except' => ['login', 'register', 'verify_link_email', 'forgot_password', 'reset_password']]);
+        $this->middleware(['auth:sanctum'], ['except' => ['login', 'register', 'verify_link_email', 'forgot_password', 'reset_password','merge_dni_photos']]);
     }
 
     public function login(Request $request)
@@ -101,6 +107,7 @@ class AuthController extends Controller
             'email' => 'required|string|email|max:255|unique:users|unique:email_to_verify',
             'password' => 'required|string|min:8',
             'renewvaldate' => 'nullable|date'
+
         ]);
 
         // Create user data
@@ -144,6 +151,27 @@ class AuthController extends Controller
             DB::rollback();
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function merge_dni_photos($image_list){
+        /*
+        $photos = [$request->file('photo1'),$request->file('photo2')];
+        $image_path= [];
+        foreach($photos as $photo){
+            $image_path[] = $photo->store('temp/images');
+        }*/
+        $manager = ImageManager::gd();
+        $resized = [];
+        foreach($image_list as $photo){
+            $resized[] =  $manager->read($photo)->resize(1280, 720, function ($constraint) {
+                $constraint->aspectRatio();
+            });
+        }
+        $img_merged = $manager->create(1280, 1440);
+        $img_merged->place($resized[0], 'top-left');
+        $img_merged->place($resized[1], 'bottom-left');
+        $image = $img_merged->encode(new WebpEncoder(quality: 75));
+        return base64_encode($image);
     }
 
     public function logout()

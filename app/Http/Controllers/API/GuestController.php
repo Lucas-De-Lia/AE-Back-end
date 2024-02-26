@@ -12,8 +12,11 @@ use Illuminate\Http\Response;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+
+
 use Intervention\Image\Laravel\Facades\Image as ImageIntervention;
 use Intervention\Image\Decoders\FilePathImageDecoder;
+use Intervention\Image\Decoders\DataUriImageDecoder;
 use Intervention\Image\Decoders\Base64ImageDecoder;
 
 class GuestController extends Controller
