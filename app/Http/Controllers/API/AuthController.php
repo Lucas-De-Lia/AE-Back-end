@@ -17,15 +17,11 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 
-use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Gd\Driver;
-use Intervention\Image\Decoders\FilePathImageDecoder;
-use Intervention\Image\Decoders\DataUriImageDecoder;
-use Intervention\Image\Decoders\Base64ImageDecoder;
-use Intervention\Image\Encoders\WebpEncoder;
+
 
 class AuthController extends Controller
 {
@@ -106,10 +102,10 @@ class AuthController extends Controller
             'study' => 'nullable|string|max:4',  // Consider providing more specific validation
             'email' => 'required|string|email|max:255|unique:users|unique:email_to_verify',
             'password' => 'required|string|min:8',
-            'renewvaldate' => 'nullable|date'
-
+            'renewvaldate' => 'nullable|date',
+            'dni1' => 'required|file|max:2048',
+            'dni2' => 'required|file|max:2048',
         ]);
-
         // Create user data
         $data = [
             'name' => implode(', ', [$request->firstname, $request->lastname]),
@@ -153,26 +149,7 @@ class AuthController extends Controller
         }
     }
 
-    public function merge_dni_photos($image_list){
-        /*
-        $photos = [$request->file('photo1'),$request->file('photo2')];
-        $image_path= [];
-        foreach($photos as $photo){
-            $image_path[] = $photo->store('temp/images');
-        }*/
-        $manager = ImageManager::gd();
-        $resized = [];
-        foreach($image_list as $photo){
-            $resized[] =  $manager->read($photo)->resize(1280, 720, function ($constraint) {
-                $constraint->aspectRatio();
-            });
-        }
-        $img_merged = $manager->create(1280, 1440);
-        $img_merged->place($resized[0], 'top-left');
-        $img_merged->place($resized[1], 'bottom-left');
-        $image = $img_merged->encode(new WebpEncoder(quality: 75));
-        return base64_encode($image);
-    }
+
 
     public function logout()
     {

@@ -13,11 +13,13 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
-
-use Intervention\Image\Laravel\Facades\Image as ImageIntervention;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\Decoders\FilePathImageDecoder;
 use Intervention\Image\Decoders\DataUriImageDecoder;
 use Intervention\Image\Decoders\Base64ImageDecoder;
+use Intervention\Image\Encoders\WebpEncoder;
+
 
 class GuestController extends Controller
 {
@@ -71,6 +73,9 @@ class GuestController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+
+
     public function getQuestionList()
     {
         $questions = Question::all();
