@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Exception;
 class AE {
     const NON_AE = -1;
@@ -24,7 +25,7 @@ use Intervention\Image\Decoders\FilePathImageDecoder;
 use Intervention\Image\Decoders\DataUriImageDecoder;
 use Intervention\Image\Decoders\Base64ImageDecoder;
 use Intervention\Image\Encoders\WebpEncoder;
-
+use Carbon\Carbon;
 
 class AeController extends Controller
 {
@@ -135,6 +136,23 @@ class AeController extends Controller
         preg_match('/-(\d+)-/', $cuil, $matches);
         return (int)($matches[1]);;
     }
+    public static function start($postData, $file){
+        try{
+            $url = env("API_URL_AE");
+            $token = env("API_TOKEN_AE");
+            $response = Http::withHeaders([
+                'API-Token' => $token,
+            ])->attach(name:"ae_importacion.scandni", contents: $file)
+            ->post($url . '/agregar', $postData);
+            Log::info($response);
+            return $response;
+
+        } catch ( Exception $e) {
+            $errmsg = $e->getMessage();
+            Log::info($errmsg);
+            return response()->json(['message' => $errmsg], 500);
+        }
+    }
 
     public static function merge_dni_photos($image_list){
         $manager = ImageManager::gd();
@@ -147,38 +165,53 @@ class AeController extends Controller
         $img_merged = $manager->create(1280, 1440);
         $img_merged->place($resized[0], 'top-left');
         $img_merged->place($resized[1], 'bottom-left');
-        return $img_merged->encode(new WebpEncoder(quality: 75));
+        return $img_merged->toWebp();
     }
 
 
     public static function register_ae(Request $request)
     {
+        $postData = [];
+        foreach ($request->all() as $key => $value) {
+            if (!is_array($value)){
+                $postData[] = [ 'name' => $key, 'contents' => $value];
+                continue;
+            }
+
+            foreach ($value as $key2 => $value2) {
+                $postData[] = [ 'name' => $key.'['.$key2.']', 'contents' => $value2];
+            }
+        }
+        Log::info(json_encode($postData));
+        /*
         $postData= [
-            'ae_datos' => [
-                'nro_dni' => AeController::getDNI($request->cuil),
-                'nombres' => $request->firstname,
-                'apellido' => $request->lastname,
-                'fecha_nacimiento' => $request->birthdate,
-                'sexo' => $request->gender,
-                'domicilio' => $request->address,
-                'nro_domicilio' => (int) $request->address_number,
-                'piso' => $request->floor,
-                'dpto' => $request->apartament,
-                'codigo_postal' => $request->postalcode,
-                'nombre_localidad' => $request->city,
-                'nombre_provincia' => $request->province,
-                'ocupacion' => $request->occupation,
-                'capacitacion' => $request->study,
-                //'estado_civil' => $request,
-                'telefono' => $request->phone,
-                'correo' => $request->email,
-            ],
-            "ae_importacion" => ["scandni" => AeController::merge_dni_photos([$request->dni1, $request->dni2])],
-            'ae_estado' => ['fecha_ae' => $request->startdate],
-        ];
-        //Log::info(base64_encode($postData["ae_importacion"]["scandni"]));
-        $response = AeController::start($postData);
-        Log::info($response);
+            [ 'name' => 'ae_datos.nro_dni', 'contents' => AeController::getDNI($request->cuil)],
+            [ 'name' => 'ae_datos.nombres', 'contents' => $request->firstname],
+            [ 'name' => 'ae_datos.apellido', 'contents' => $request->lastname],
+            [ 'name' => 'ae_datos.fecha_nacimiento', 'contents' => $request->birthdate],
+            [ 'name' => 'ae_datos.sexo', 'contents' => $request->gender],
+            [ 'name' => 'ae_datos.domicilio', 'contents' => $request->address],
+            [ 'name' => 'ae_datos.nro_domicilio', 'contents' => (int) $request->address_number],
+            [ 'name' => 'ae_datos.piso', 'contents' => $request->floor],
+            [ 'name' => 'ae_datos.dpto', 'contents' => $request->apartament],
+            [ 'name' => 'ae_datos.codigo_postal', 'contents' => $request->postalcode],
+            [ 'name' => 'ae_datos.nombre_localidad', 'contents' => $request->city],
+            [ 'name' => 'ae_datos.nombre_provincia', 'contents' => $request->province],
+            [ 'name' => 'ae_datos.ocupacion', 'contents' => $request->occupation],
+            [ 'name' => 'ae_datos.capacitacion', 'contents' => $request->study],
+            [ 'name' => 'ae_datos.telefono', 'contents' => $request->phone],
+            [ 'name' => 'ae_datos.correo', 'contents' => $request->email],
+            [ 'name' => 'ae_estado.fecha_ae', 'contents' => $request->startdate],
+        ];*/
+
+
+        $image = AeController::merge_dni_photos([$request->dni1, $request->dni2]);
+        //$imagepath = 'app/private/dni/' . $request->cuil . '.webp';
+        //Storage::put($imagepath, $image);
+
+
+        $response = AeController::start($postData, $image);
+        //Storage::delete($imagepath, $imagepath);
         return $response;
 
     }
@@ -202,7 +235,8 @@ class AeController extends Controller
             'startdate' => 'required|date',
             'occupation'        => 'nullable|string|max:4', // VER COMO HACERLO
             'study'     => 'nullable|string|max:4',
-            'dnifiles' => 'required|array', // VER COMO HACERLOO
+            'dni1' => 'required|file|max:2048',
+            'dni2' => 'required|file|max:2048',
         ]);
 
         if(Auth::check()){;
@@ -249,27 +283,16 @@ class AeController extends Controller
                     'nombre_provincia' => $request->state,
                     'ocupacion' => $request->occupation,
                     'capacitacion' => $request->study,
-                    //'estado_civil' => $request,
                     'telefono' => $request->phone,
                     'correo' => $user->email, // ES EL DEL USER
                 ],
-                "ae_importacion" => ["scandni" => AeController::merge_dni_photos($request->dnifiles)],
                 'ae_estado' => ['fecha_ae' => $request->startdate],
             ];
-            $response = AeController::start($postData);
+            $response = AeController::start($postData, AeController::merge_dni_photos([$request->dni1, $request->dni2]));
             return $response;
         }
     }
 
-    public static function start($postData){
-        $url = env("API_URL_AE");
-        $token = env("API_TOKEN_AE");
-        $response = Http::withHeaders([
-            'API-Token' => $token,
-            'Content-Type' => 'multipart/form-data',
-        ])->post($url . '/agregar', $postData);
-        return $response;
-    }
 
     public function fetch_user_data(Request $request){
         if(Auth::check()){
