@@ -136,21 +136,17 @@ class AeController extends Controller
         preg_match('/-(\d+)-/', $cuil, $matches);
         return (int)($matches[1]);;
     }
-    public static function start($postData, $file){
+    public static function start($postData){
         try{
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");
             $response = Http::withHeaders([
-                'API-Token' => $token,
-            ])->attach(name:"ae_importacion.scandni", contents: $file)
-            ->post($url . '/agregar', $postData);
-            Log::info($response);
+                'API-Token' => $token
+            ])->post($url . '/agregar', $postData);
             return $response;
 
         } catch ( Exception $e) {
-            $errmsg = $e->getMessage();
-            Log::info($errmsg);
-            return response()->json(['message' => $errmsg], 500);
+            return response()->json('Error al registrar AE', 500);
         }
     }
 
@@ -171,49 +167,40 @@ class AeController extends Controller
 
     public static function register_ae(Request $request)
     {
-        $postData = [];
-        foreach ($request->all() as $key => $value) {
-            if (!is_array($value)){
-                $postData[] = [ 'name' => $key, 'contents' => $value];
-                continue;
-            }
-
-            foreach ($value as $key2 => $value2) {
-                $postData[] = [ 'name' => $key.'['.$key2.']', 'contents' => $value2];
-            }
-        }
-        Log::info(json_encode($postData));
-        /*
-        $postData= [
-            [ 'name' => 'ae_datos.nro_dni', 'contents' => AeController::getDNI($request->cuil)],
-            [ 'name' => 'ae_datos.nombres', 'contents' => $request->firstname],
-            [ 'name' => 'ae_datos.apellido', 'contents' => $request->lastname],
-            [ 'name' => 'ae_datos.fecha_nacimiento', 'contents' => $request->birthdate],
-            [ 'name' => 'ae_datos.sexo', 'contents' => $request->gender],
-            [ 'name' => 'ae_datos.domicilio', 'contents' => $request->address],
-            [ 'name' => 'ae_datos.nro_domicilio', 'contents' => (int) $request->address_number],
-            [ 'name' => 'ae_datos.piso', 'contents' => $request->floor],
-            [ 'name' => 'ae_datos.dpto', 'contents' => $request->apartament],
-            [ 'name' => 'ae_datos.codigo_postal', 'contents' => $request->postalcode],
-            [ 'name' => 'ae_datos.nombre_localidad', 'contents' => $request->city],
-            [ 'name' => 'ae_datos.nombre_provincia', 'contents' => $request->province],
-            [ 'name' => 'ae_datos.ocupacion', 'contents' => $request->occupation],
-            [ 'name' => 'ae_datos.capacitacion', 'contents' => $request->study],
-            [ 'name' => 'ae_datos.telefono', 'contents' => $request->phone],
-            [ 'name' => 'ae_datos.correo', 'contents' => $request->email],
-            [ 'name' => 'ae_estado.fecha_ae', 'contents' => $request->startdate],
-        ];*/
-
-
         $image = AeController::merge_dni_photos([$request->dni1, $request->dni2]);
-        //$imagepath = 'app/private/dni/' . $request->cuil . '.webp';
-        //Storage::put($imagepath, $image);
+        $nro_dni = AeController::getDNI($request->cuil);
+        $postData = [
+                'ae_datos' => [
+                    'nro_dni' =>  $nro_dni,
+                    'nombres' => $request->firstname,
+                    'apellido' => $request->lastname,
+                    'fecha_nacimiento' => $request->birthdate,
+                    'sexo' => $request->gender,
+                    'domicilio' => $request->address,
+                    'nro_domicilio' => $request->address_number,
+                    'piso' => $request->floor,
+                    'dpto' => $request->apartament,
+                    'codigo_postal' => $request->postalcode,
+                    'nombre_localidad' => $request->city,
+                    'nombre_provincia' => $request->province,
+                    'ocupacion' => $request->occupation,
+                    'capacitacion' => $request->study,
+                    'telefono' => $request->phone,
+                    'correo' => $request->email, // ES EL DEL USER
+                ],
+                'ae_estado' => ['fecha_ae' => $request->startdate],
+        ];
+        $response = AeController::start($postData);
+        $url = env("API_URL_AE");
+        $token = env("API_TOKEN_AE");
 
+        $response2 = Http::withHeaders([
+                'API-Token' => $token
+            ])
+            ->attach('file', $image, 'dni_' . $nro_dni . '.webp')
+            ->post($url . '/agregarFile', [[ 'name' => 'dni' , 'contents'=> $nro_dni]]);
 
-        $response = AeController::start($postData, $image);
-        //Storage::delete($imagepath, $imagepath);
-        return $response;
-
+        return  [ '1' => $response->body(), '2' => $response2->body()];
     }
 
 

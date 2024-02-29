@@ -140,7 +140,7 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'User created successfully',
                 'user' => $user,
-                'ae' =>  $ae->body()
+                'ae' =>  $ae
             ], Response::HTTP_CREATED);
         } catch (\Exception $e) {
             // Rollback the database transaction and return an error response
