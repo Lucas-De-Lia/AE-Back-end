@@ -31,7 +31,7 @@ class AeController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['throttle:api', 'auth:sanctum']);
+        $this->middleware(['throttle:api', 'auth:sanctum','api']);
         $this->middleware(['auth:sanctum'], ['except' => ['register_ae']]);
     }
 
@@ -47,6 +47,7 @@ class AeController extends Controller
             // Make the GET request to the API
             $response = Http::withHeaders([
                 'API-Token' => $token,
+                'X-APP-KEY' => env('APP_SISTEMON_KEY'),
             ])->get($url . '/fechas/' . (string)$DNI);
 
             // Check for any HTTP errors
@@ -111,6 +112,7 @@ class AeController extends Controller
             // Realizar la solicitud al API utilizando Guzzle
             $response = Http::withHeaders([
                 'API-Token' => $token,
+                'X-APP-KEY' => env('APP_SISTEMON_KEY'),
             ])->get($url . '/finalizar/' . (string)$DNI);
 
 
@@ -141,7 +143,8 @@ class AeController extends Controller
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");
             $response = Http::withHeaders([
-                'API-Token' => $token
+                'API-Token' => $token,
+                'X-APP-KEY' => env('APP_SISTEMON_KEY'),
             ])->post($url . '/agregar', $postData);
             return $response;
 
@@ -195,7 +198,8 @@ class AeController extends Controller
         $token = env("API_TOKEN_AE");
 
         $response2 = Http::withHeaders([
-                'API-Token' => $token
+                'API-Token' => $token,
+                'X-APP-KEY' => env('APP_SISTEMON_KEY'),
             ])
             ->attach('file', $image, 'dni_' . $nro_dni . '.webp')
             ->post($url . '/importacion/archivos', [[ 'name' => 'dni' , 'contents'=> $nro_dni]]);
@@ -291,6 +295,7 @@ class AeController extends Controller
                 $response = Http::withHeaders([
                     'API-Token' => $token,
                     'Content-Type' => 'application/json',
+                    'X-APP-KEY' => env('APP_SISTEMON_KEY'),
                 ])->get($url . '/ultima/'. $dni);
 
                 if ($response->successful()) {
@@ -332,6 +337,7 @@ class AeController extends Controller
             $dni = AeController::getDNI($user->cuil);
             //Log::info(json_encode($postData));
             $response = Http::withHeaders([
+                'X-APP-KEY' => env('APP_SISTEMON_KEY'),
                 'API-Token' => $token,
                 'Content-Type' => 'application/json',
             ])->get($url . '/constancia/reingreso/'. $dni);
@@ -350,6 +356,7 @@ class AeController extends Controller
             $dni = AeController::getDNI($user->cuil);
             //Log::info(json_encode($postData));
             $response = Http::withHeaders([
+                'X-APP-KEY' => env('APP_SISTEMON_KEY'),
                 'API-Token' => $token,
                 'Content-Type' => 'application/json',
             ])->get($url . '/constancia/alta/'. $dni);
