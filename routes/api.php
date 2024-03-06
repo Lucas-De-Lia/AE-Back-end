@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\GuestController;
+use App\Http\Controllers\API\EmailVerifyController;
 
 
 
@@ -25,6 +26,16 @@ Route::prefix('auth')->group(function () {
     Route::post('/forgot-password', [AuthController::class, 'forgot_password']);
     Route::post('/reset-password', [AuthController::class, 'reset_password']);
     Route::post('/change-password', [AuthController::class, 'change_password']);
+});
+
+Route::prefix('email')->group(function () {
+    Route::get('/email/verify', function () {
+        return response()->json(['status' => false]);
+    })->middleware('auth')->name('verification.notice');
+
+    Route::post('/verify/{id}/{hash}', [EmailVerifyController::class, 'email_verify'])->name('verification.verify');
+
+    Route::post('/verification-notification', [EmailVerifyController::class, 'verification_notification'])->name('verification.send');
 });
 
 Route::prefix('ae')->group(function () {

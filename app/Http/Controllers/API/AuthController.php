@@ -22,6 +22,7 @@ use App\Jobs\SendVerifyMailJob;
 use App\Jobs\SendMailForgotPassJob;
 use App\Jobs\SendMailCodeJob;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Str;
 use Illuminate\Auth\Events\Registered;
 class AuthController extends Controller
 {
@@ -36,7 +37,7 @@ class AuthController extends Controller
         $this->middleware('throttle:api');
 
         // Apply 'verified' middleware to all methods except the specified ones.
-        $this->middleware(['verified'], ['except' => ['login', 'logout', 'register', 'email_send_code', 'verify_code_email', 'verify_link_email','merge_dni_photos']]);
+        $this->middleware(['verified'], ['except' => ['login', 'logout', 'register', 'email_send_code','forgot_password', 'verify_code_email', 'verify_link_email','merge_dni_photos']]);
 
         // Apply 'auth:sanctum' middleware to all methods except the specified ones.
         $this->middleware(['auth:sanctum'], ['except' => ['login', 'register', 'verify_link_email', 'forgot_password', 'reset_password','merge_dni_photos']]);
@@ -281,10 +282,10 @@ class AuthController extends Controller
             return response()->json(['error' => 'Unauthenticated'], Response::HTTP_UNAUTHORIZED);
         }
     }
-    //esta verificacion hace lo mismo pero envia un link ( esta es para el registro )
-    public function verify_link_email(EmailVerificationRequest $request)
+    //esta verificacion hace lo mismo pero envia un link ( esta es para el registro ) EmailVerificationRequest
+    public function verify_link_email(Request $request)
     {
-        $request->fulfill();
+        //$request->fulfill();
         $request->validate([
             'hash' => 'required|regex:/^[A-Z0-9]{10}$/',
             'id' => 'required|max:255']);
