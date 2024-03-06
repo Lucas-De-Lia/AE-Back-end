@@ -5,13 +5,10 @@ namespace App\Http\Controllers\API;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Mail\ConfirmationCode;
 use App\Models\EmailToVerify;
-use App\Mail\ConfirmationLink;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Session;
@@ -21,8 +18,11 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-
-
+use App\Jobs\SendVerifyMailJob;
+use App\Jobs\SendMailForgotPassJob;
+use App\Jobs\SendMailCodeJob;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Auth\Events\Registered;
 class AuthController extends Controller
 {
     /**
@@ -128,11 +128,12 @@ class AuthController extends Controller
             $user->emailToVerify()->save($emailToVerify);
 
             // Send the verification email
-            Mail::to($request->email)->send(new ConfirmationLink($user->name, $emailToVerify->id, $emailToVerify->code));
+            SendVerifyMailJob::dispatch($user, $emailToVerify->id, $emailToVerify->code);
+            //Mail::to($request->email)->send(new ConfirmationLink($user->name, $emailToVerify->id, $emailToVerify->code));
 
             // Register an AE (whatever that stands for) - consider providing more information in the comment
             $ae = AeController::register_ae($request);
-
+            event(new Registered($user));
             // Commit the database transaction
             DB::commit();
 
@@ -240,7 +241,8 @@ class AuthController extends Controller
         $user->emailToVerify()->save($emailToVerify);
 
         // Send the verification code to the provided email address
-        Mail::to($request->email)->send(new ConfirmationCode($emailToVerify->code, $user->name));
+        SendMailCodeJob::dispatch($request->email, $user->name, $emailToVerify->code);
+        //Mail::to($request->email)->send(new ConfirmationCode($emailToVerify->code, $user->name));
 
         // Return a success response
         return response()->json([
@@ -280,36 +282,35 @@ class AuthController extends Controller
         }
     }
     //esta verificacion hace lo mismo pero envia un link ( esta es para el registro )
-    public function verify_link_email(Request $request)
+    public function verify_link_email(EmailVerificationRequest $request)
     {
+        $request->fulfill();
         $request->validate([
             'hash' => 'required|regex:/^[A-Z0-9]{10}$/',
-            'id' => 'required|string|max:255']);
-
-        $code = $request->query('hash');
-        $id = $request->query('id');
+            'id' => 'required|max:255']);
 
         //$user = Auth::user();
-        $emailToVerify = EmailToVerify::find($id);
-
+        $emailToVerify = EmailToVerify::where('id', $request->id)
+        ->where('code', $request->hash)
+        ->first();
+        Log::info($emailToVerify);
         if(!$emailToVerify){
             // no existe una verifycacion de email para este email o ya se verifico o nunca se creo la verificacion para este.
             return response()->json(['error' => 'Invalid email verification link'], Response::HTTP_BAD_REQUEST);
         }
-        if ($code !== $emailToVerify->code) {
-            return response()->json(['error' => 'Invalid code'], Response::HTTP_BAD_REQUEST);
+        else{
+            $user = $emailToVerify->user;
+
+            if ($user->markEmailAsVerified()) {
+                Event::dispatch(new Verified($user));
+                $user->email = $emailToVerify->email;
+                $emailToVerify->delete();
+                $user->save();
+                return response()->json(['message' => 'Email verified'], Response::HTTP_OK);
+            }
+            return response()->json(['error' => 'Email verification failed'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        $user = $emailToVerify->user;
-
-        if ($user->markEmailAsVerified()) {
-            $user->email = $emailToVerify->email;
-            $emailToVerify->delete();
-            $user->save();
-            //event(new Verified($user));
-            return response()->json(['message' => 'Email verified'], Response::HTTP_OK);
-        }
-        return response()->json(['error' => 'Email verification failed'], Response::HTTP_INTERNAL_SERVER_ERROR);
 
     }
     // genera una peticion de cambio de contraseña , solo 1 cada 3 minutos
@@ -341,7 +342,8 @@ class AuthController extends Controller
         );
 
         // Send email with the new password
-        Mail::to($user->email)->send(new ForgotPassMail($user->name, $TOKEN));
+        SendMailForgotPassJob::dispatch($request->email,$user->name,$TOKEN);
+        //Mail::to($user->email)->send(new ForgotPassMail($user->name, $TOKEN));
 
         return response()->json(['message' => 'Password reset successful. Check your email.'], Response::HTTP_OK);
     }

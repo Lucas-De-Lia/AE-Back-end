@@ -19,7 +19,7 @@ Route::prefix('auth')->group(function () {
 
     Route::post('/email/verify/send', [AuthController::class, 'email_send_code']);
     Route::post('/email/verify/confirm', [AuthController::class, 'verify_code_email']);
-    Route::get('/email/verify-link', [AuthController::class, 'verify_link_email']);
+    Route::post('/email/verify-link', [AuthController::class, 'verify_link_email']);
 
 
     Route::post('/forgot-password', [AuthController::class, 'forgot_password']);
