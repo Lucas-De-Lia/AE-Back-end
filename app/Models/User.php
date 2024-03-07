@@ -65,7 +65,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function hasVerifiedEmail()
     {
-        return !is_null($this->email_verified_at);
+        return $this->email_verified_at !==null;
     }
 
     /**
@@ -75,19 +75,15 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function markEmailAsVerified()
     {
-        $this->email_verified_at = now();
-        $this->save();
+        try{
+            $this->email_verified_at = now();
+            $this->save();
+        }catch (\Exception $e){
+            return false;
+        }
         return true;
     }
-    /**
-     * Send the email verification notification.
-     *
-     * @return void
-     */
-    public function sendEmailVerificationNotification()
-    {
-       //$this->notify();
-    }
+
 
     /**
      * Get the email address that should be used for verification.

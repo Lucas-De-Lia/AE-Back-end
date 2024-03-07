@@ -14,13 +14,14 @@ Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
     Route::post('register', [AuthController::class, 'register']);
     Route::post('logout', [AuthController::class, 'logout']);
+    Route::post('refresh', [AuthController::class, 'refresh']);
 
     //Route::post('/email/verify/{id}/{hash}', [AuthController::class, 'email_verify']);
     //Route::post('/email/verification-notification', [AuthController::class, 'verification_notification']);
 
-    Route::post('/email/verify/send', [AuthController::class, 'email_send_code']);
-    Route::post('/email/verify/confirm', [AuthController::class, 'verify_code_email']);
-    Route::post('/email/verify-link', [AuthController::class, 'verify_link_email']);
+    //Route::post('/email/verify/send', [AuthController::class, 'email_send_code']);
+    //Route::post('/email/verify/confirm', [AuthController::class, 'verify_code_email']);
+    //Route::post('/email/verify-link', [AuthController::class, 'verify_link_email']);
 
 
     Route::post('/forgot-password', [AuthController::class, 'forgot_password']);
@@ -29,9 +30,9 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::prefix('email')->group(function () {
-    Route::get('/email/verify', function () {
+    Route::get('/verify', function () {
         return response()->json(['status' => false]);
-    })->middleware('auth')->name('verification.notice');
+    })->middleware('auth:api')->name('verification.notice');
 
     Route::post('/verify/{id}/{hash}', [EmailVerifyController::class, 'email_verify'])->name('verification.verify');
 

@@ -37,7 +37,7 @@ class AuthController extends Controller
         $this->middleware('throttle:api');
 
         // Apply 'verified' middleware to all methods except the specified ones.
-        $this->middleware(['verified'], ['except' => ['login', 'logout', 'register', 'email_send_code','forgot_password', 'verify_code_email', 'verify_link_email','merge_dni_photos']]);
+        $this->middleware(['verified'], ['except' => ['login','refresh', 'logout', 'register', 'email_send_code','forgot_password', 'verify_code_email', 'verify_link_email','merge_dni_photos']]);
 
         // Apply 'auth:sanctum' middleware to all methods except the specified ones.
         $this->middleware(['auth:sanctum'], ['except' => ['login', 'register', 'verify_link_email', 'forgot_password', 'reset_password','merge_dni_photos']]);
@@ -177,11 +177,6 @@ class AuthController extends Controller
 
             return response()->json([
                 'user' => $user,
-                'authorization' => [
-                    'token' => Auth::refresh(),
-                    'type' => 'bearer',
-                    'expires_in' => Auth::factory()->getTTL() * 60, // Tiempo de expiración del nuevo token en segundos
-                ],
             ], Response::HTTP_CREATED);
         }
         return response()->json([
