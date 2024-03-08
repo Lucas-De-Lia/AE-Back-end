@@ -29,10 +29,14 @@ class AuthServiceProvider extends ServiceProvider
         VerifyEmail::toMailUsing(function (object $notifiable, string $url) {
             $dom = env('APP_URL') . "api/";
             $newUrl = str_replace($dom, env('FRONT_END_URL') . 'user/', $url);
-            return (new MailMessage)
+            $mail = (new MailMessage)
+                ->greeting('Hola! ' . $notifiable->name)
                 ->subject('Verificá dirección de correo electrónico')
-                ->line('Hola! ' . $notifiable->name . ', recivimos tu solicitud. Haz clic en el botón de abajo para verificar tu dirección de correo electrónico.')
-                ->action('Verificar Email', $newUrl);
+                ->line('¡Gracias por confiar en nosotros!, Recivimos tu solicitud. Haz clic en el botón de abajo para verificar tu dirección de correo electrónico.')
+                ->action('Verificar Email', $newUrl)
+                ->salutation("Saludos, Departamento de Casinos");
+            return $mail;
+
         });
     }
 }

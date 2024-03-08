@@ -84,7 +84,6 @@ class User extends Authenticatable implements MustVerifyEmail
         return true;
     }
 
-
     /**
      * Get the email address that should be used for verification.
      *
