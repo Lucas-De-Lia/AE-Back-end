@@ -36,7 +36,6 @@ class AuthServiceProvider extends ServiceProvider
                 ->action('Verificar Email', $newUrl)
                 ->salutation("Saludos, Departamento de Casinos");
             return $mail;
-
         });
     }
 }

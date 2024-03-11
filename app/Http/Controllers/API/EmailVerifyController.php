@@ -8,15 +8,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Response;
 
 class EmailVerifyController extends Controller
 {
         public function __construct()
     {
         // Rate limit the number of requests from any user to prevent server overload, with a maximum of 100 requests per minute.
-        $this->middleware(['throttle:api','signed']);
+        $this->middleware(['throttle:api']);
         // Apply 'verified' middleware to all methods except the specified ones.
-        $this->middleware(['verified'], ['except' => ['email_verify']]);
+        $this->middleware('signed', ['except' => 'email_send']);
+        $this->middleware(['verified'], ['except' => ['email_verify','email_send']]);
         $this->middleware('auth:sanctum');
 
     }
@@ -47,6 +49,11 @@ class EmailVerifyController extends Controller
     }
 
     public function email_send (Request $request){
-         $request->user()->sendEmailVerificationNotification();
+        $user = $request->user();
+        if ($request->user()->hasVerifiedEmail()) {
+            return response()->json('User already have verified email', Response::HTTP_BAD_REQUEST);
+        }
+        $user->sendEmailVerificationNotification();
+        return response()->json(['message' => 'Verification send'], Response::HTTP_OK);
     }
 }

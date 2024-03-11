@@ -56,7 +56,7 @@ class AuthController extends Controller
             $token = $user->createToken('token-name')->plainTextToken;
 
             return response()->json([
-                'user' => $user->only(['name', 'email', 'cuil']),
+                'user' => $user->only(['name', 'email', 'cuil','email_verified_at']),
                 'authorization' => [
                     'token' => $token,
                     'type' => 'Bearer ',
@@ -122,14 +122,15 @@ class AuthController extends Controller
             $user = User::create($data);
 
             // Create a new email verification record
+            /*
             $emailToVerify = new EmailToVerify([
                 'email' => $request->email,
                 'code' => self::str_random(10),
             ]);
             $user->emailToVerify()->save($emailToVerify);
-
+            */
             // Send the verification email
-            SendVerifyMailJob::dispatch($user, $emailToVerify->id, $emailToVerify->code);
+
             //Mail::to($request->email)->send(new ConfirmationLink($user->name, $emailToVerify->id, $emailToVerify->code));
 
             // Register an AE (whatever that stands for) - consider providing more information in the comment
@@ -141,7 +142,7 @@ class AuthController extends Controller
             // Return a JSON response
             return response()->json([
                 'message' => 'User created successfully',
-                'user' => $user,
+                'user' => $user->only(['name', 'email', 'cuil','email_verified_at']),
                 'ae' =>  $ae
             ], Response::HTTP_CREATED);
         } catch (\Exception $e) {
@@ -277,6 +278,7 @@ class AuthController extends Controller
             return response()->json(['error' => 'Unauthenticated'], Response::HTTP_UNAUTHORIZED);
         }
     }
+
     //esta verificacion hace lo mismo pero envia un link ( esta es para el registro ) EmailVerificationRequest
     public function verify_link_email(Request $request)
     {
