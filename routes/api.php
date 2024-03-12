@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\AeController;
+use App\Http\Controllers\API\PasswordsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
@@ -16,27 +17,31 @@ Route::prefix('auth')->group(function () {
     Route::post('logout', [AuthController::class, 'logout']);
     Route::post('refresh', [AuthController::class, 'refresh']);
 
-    //Route::post('/email/verify/{id}/{hash}', [AuthController::class, 'email_verify']);
-    //Route::post('/email/verification-notification', [AuthController::class, 'verification_notification']);
-
     //Route::post('/email/verify/send', [AuthController::class, 'email_send_code']);
     //Route::post('/email/verify/confirm', [AuthController::class, 'verify_code_email']);
-    //Route::post('/email/verify-link', [AuthController::class, 'verify_link_email']);
 
+    //Route::post('/forgot-password', [AuthController::class, 'forgot_password']);
+    //Route::post('/reset-password', [AuthController::class, 'reset_password']);
+    //Route::post('/change-password', [AuthController::class, 'change_password']);
+});
 
-    Route::post('/forgot-password', [AuthController::class, 'forgot_password']);
-    Route::post('/reset-password', [AuthController::class, 'reset_password']);
-    Route::post('/change-password', [AuthController::class, 'change_password']);
+Route::prefix('password')->group(function () {
+    Route::get('/reset-password/{token}', function (string $token) {
+        return view('auth.reset-password', ['token' => $token]);
+    })->middleware('guest')->name('password.reset'); //esto es necesario para enviar el link
+    Route::post('forgot', [PasswordsController::class, 'forgot_password'])->name('password.email');
+    Route::post('reset', [PasswordsController::class, 'reset_password'])->name('password.update');
 });
 
 Route::prefix('email')->group(function () {
-    Route::get('/verify', function () {
+    //rename functions
+    Route::get('verify', function () {
         return response()->json(['status' => false]);
     })->middleware('auth:api')->name('verification.notice');
 
-    Route::post('/verify/{id}/{hash}', [EmailVerifyController::class, 'email_verify'])->name('verification.verify');
+    Route::post('verify/{id}/{hash}', [EmailVerifyController::class, 'email_verify'])->name('verification.verify');
 
-    Route::post('/verification-notification', [EmailVerifyController::class, 'email_send'])->name('verification.resend');
+    Route::post('verification-notification', [EmailVerifyController::class, 'email_send'])->name('verification.resend');
 });
 
 Route::prefix('ae')->group(function () {

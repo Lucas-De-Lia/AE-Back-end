@@ -10,8 +10,10 @@ use Laravel\Sanctum\HasApiTokens;
 use \App\Notifications\CustomVerifyEmail;
 use App\Models\EmailToVerify;
 use App\Models\PasswordResets;
+use App\Notifications\ResetPasswordNotification;
+use Illuminate\Contracts\Auth\CanResetPassword;
 
-class User extends Authenticatable implements MustVerifyEmail
+class User extends Authenticatable implements MustVerifyEmail, CanResetPassword
 {
     use HasApiTokens, HasFactory, Notifiable;
     protected $username = 'cuil';
@@ -21,7 +23,8 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(EmailToVErify::class);
     }
 
-    public function forgotpassword(){
+    public function forgotpassword()
+    {
         return $this->hasOne(PasswordResets::class);
     }
 
@@ -65,7 +68,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function hasVerifiedEmail()
     {
-        return $this->email_verified_at !==null;
+        return $this->email_verified_at !== null;
     }
 
     /**
@@ -75,10 +78,10 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function markEmailAsVerified()
     {
-        try{
+        try {
             $this->email_verified_at = now();
             $this->save();
-        }catch (\Exception $e){
+        } catch (\Exception $e) {
             return false;
         }
         return true;

@@ -6,24 +6,16 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\EmailToVerify;
-use Illuminate\Auth\Events\PasswordReset;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\Session;
-use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
-use App\Jobs\SendVerifyMailJob;
 use App\Jobs\SendMailForgotPassJob;
 use App\Jobs\SendMailCodeJob;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\Registered;
+
 class AuthController extends Controller
 {
     /**
@@ -37,10 +29,10 @@ class AuthController extends Controller
         $this->middleware('throttle:api');
 
         // Apply 'verified' middleware to all methods except the specified ones.
-        $this->middleware(['verified'], ['except' => ['login','refresh', 'logout', 'register', 'email_send_code','forgot_password', 'verify_code_email', 'verify_link_email','merge_dni_photos']]);
+        $this->middleware(['verified'], ['except' => ['login', 'refresh', 'logout', 'register', 'email_send_code', 'forgot_password', 'verify_code_email', 'verify_link_email', 'merge_dni_photos']]);
 
         // Apply 'auth:sanctum' middleware to all methods except the specified ones.
-        $this->middleware(['auth:sanctum'], ['except' => ['login', 'register', 'verify_link_email', 'forgot_password', 'reset_password','merge_dni_photos']]);
+        $this->middleware(['auth:sanctum'], ['except' => ['login', 'register', 'verify_link_email', 'forgot_password', 'reset_password', 'merge_dni_photos']]);
     }
 
     public function login(Request $request)
@@ -56,7 +48,7 @@ class AuthController extends Controller
             $token = $user->createToken('token-name')->plainTextToken;
 
             return response()->json([
-                'user' => $user->only(['name', 'email', 'cuil','email_verified_at']),
+                'user' => $user->only(['name', 'email', 'cuil', 'email_verified_at']),
                 'authorization' => [
                     'token' => $token,
                     'type' => 'Bearer ',
@@ -129,10 +121,7 @@ class AuthController extends Controller
             ]);
             $user->emailToVerify()->save($emailToVerify);
             */
-            // Send the verification email
-
-            //Mail::to($request->email)->send(new ConfirmationLink($user->name, $emailToVerify->id, $emailToVerify->code));
-
+            // Send the verification email event(register)->email
             // Register an AE (whatever that stands for) - consider providing more information in the comment
             $ae = AeController::register_ae($request);
             event(new Registered($user));
@@ -142,8 +131,6 @@ class AuthController extends Controller
             // Return a JSON response
             return response()->json([
                 'message' => 'User created successfully',
-                'user' => $user->only(['name', 'email', 'cuil','email_verified_at']),
-                'ae' =>  $ae
             ], Response::HTTP_CREATED);
         } catch (\Exception $e) {
             // Rollback the database transaction and return an error response
@@ -177,7 +164,7 @@ class AuthController extends Controller
             $user = Auth::user();
 
             return response()->json([
-                'user' => $user,
+                'user' => $user->only(['name', 'email', 'cuil', 'email_verified_at']),
             ], Response::HTTP_CREATED);
         }
         return response()->json([
@@ -270,7 +257,7 @@ class AuthController extends Controller
                 $user->save();
                 //event(new Verified($user));
                 return response()->json(['message' => 'Confirmation successful'], Response::HTTP_OK);
-            }else {
+            } else {
                 return response()->json(['error' => 'Failed to mark email as verified'], Response::HTTP_INTERNAL_SERVER_ERROR);
             }
 
@@ -279,38 +266,6 @@ class AuthController extends Controller
         }
     }
 
-    //esta verificacion hace lo mismo pero envia un link ( esta es para el registro ) EmailVerificationRequest
-    public function verify_link_email(Request $request)
-    {
-        //$request->fulfill();
-        $request->validate([
-            'hash' => 'required|regex:/^[A-Z0-9]{10}$/',
-            'id' => 'required|max:255']);
-
-        //$user = Auth::user();
-        $emailToVerify = EmailToVerify::where('id', $request->id)
-        ->where('code', $request->hash)
-        ->first();
-        Log::info($emailToVerify);
-        if(!$emailToVerify){
-            // no existe una verifycacion de email para este email o ya se verifico o nunca se creo la verificacion para este.
-            return response()->json(['error' => 'Invalid email verification link'], Response::HTTP_BAD_REQUEST);
-        }
-        else{
-            $user = $emailToVerify->user;
-
-            if ($user->markEmailAsVerified()) {
-                Event::dispatch(new Verified($user));
-                $user->email = $emailToVerify->email;
-                $emailToVerify->delete();
-                $user->save();
-                return response()->json(['message' => 'Email verified'], Response::HTTP_OK);
-            }
-            return response()->json(['error' => 'Email verification failed'], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-
-
-    }
     // genera una peticion de cambio de contraseña , solo 1 cada 3 minutos
     public function forgot_password(Request $request)
     {
@@ -340,7 +295,7 @@ class AuthController extends Controller
         );
 
         // Send email with the new password
-        SendMailForgotPassJob::dispatch($request->email,$user->name,$TOKEN);
+        SendMailForgotPassJob::dispatch($request->email, $user->name, $TOKEN);
         //Mail::to($user->email)->send(new ForgotPassMail($user->name, $TOKEN));
 
         return response()->json(['message' => 'Password reset successful. Check your email.'], Response::HTTP_OK);

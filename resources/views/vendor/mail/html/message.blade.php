@@ -2,7 +2,7 @@
     {{-- Header --}}
     <x-slot:header>
         <x-mail::header :url="config('app.frontend_url')">
-            <img src="https://www.loteriasantafe.gov.ar/templates/loteria/images/logo.png">
+            <img src="https://www.loteriasantafe.gov.ar/images/logo_cas_mas_pcia_2024_crop.png">
             <h2 style="text-align: center">CAS Departamento Casinos</h2>
         </x-mail::header>
     </x-slot:header>
