@@ -26,9 +26,10 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::prefix('password')->group(function () {
-    Route::get('/reset-password/{token}', function (string $token) {
-        return view('auth.reset-password', ['token' => $token]);
-    })->middleware('guest')->name('password.reset'); //esto es necesario para enviar el link
+    Route::get('/reset-password/{token}', function (string $token) {//esto es necesario para enviar el link pero no se usa
+        return response()->json(['status' => false]); //esto es necesario para enviar el link pero no se usa
+    })->middleware('guest')->name('password.reset'); //esto es necesario para enviar el link pero no se usa
+
     Route::post('forgot', [PasswordsController::class, 'forgot_password'])->name('password.email');
     Route::post('reset', [PasswordsController::class, 'reset_password'])->name('password.update');
 });
@@ -43,6 +44,7 @@ Route::prefix('email')->group(function () {
 
     Route::post('verification-notification', [EmailVerifyController::class, 'email_send'])->name('verification.resend');
 });
+
 
 Route::prefix('ae')->group(function () {
     Route::get('dates', [AeController::class, 'get_calendar_dates']);

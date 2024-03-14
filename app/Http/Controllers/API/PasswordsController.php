@@ -19,7 +19,7 @@ class PasswordsController extends Controller
         $this->middleware(['throttle:api']);
         // Apply 'verified' middleware to all methods except the specified ones
         //$this->middleware(['verified']);
-        $this->middleware(['auth:sanctum'], ['except' => ['forgot_password', 'forgot_password']]);
+        //$this->middleware(['auth:sanctum'], ['except' => ['forgot_password', 'forgot_password']]);
 
     }
     public function forgot_password(Request $request)
@@ -27,9 +27,7 @@ class PasswordsController extends Controller
         $request->validate(['cuil' => 'exists:users,cuil']);
         $user = User::whereCuil($request->cuil)->first();
         if ($user && $user->hasVerifiedEmail()) {
-            $status = Password::sendResetLink([
-                'email' => $user->email,
-            ]);
+            $status = Password::sendResetLink($user->only('email'));
             return $status == Password::RESET_LINK_SENT
                 ? response()->json(['status' => __($status)], Response::HTTP_OK)
                 : response()->json(['email' => __($status)], Response::HTTP_BAD_REQUEST);
@@ -44,12 +42,12 @@ class PasswordsController extends Controller
     {
         $request->validate([
             'token' => 'required',
-            'email' => 'required|email',
+            'cuil' => 'required',
             'password' => 'required|min:8|confirmed',
         ]);
 
         $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
+            $request->only('cuil', 'password', 'password_confirmation', 'token'),
             function (User $user, string $password) {
                 $user->forceFill([
                     'password' => Hash::make($password)

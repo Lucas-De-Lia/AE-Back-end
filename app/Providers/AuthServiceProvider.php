@@ -39,12 +39,14 @@ class AuthServiceProvider extends ServiceProvider
             return $mail;
         });
 
+        /*
         ResetPassword::createUrlUsing(function (User $user, string $token) {
             return env('FRONT_END_URL') . 'reset-password?token=' . $token;
-        });
+        });*/
 
         ResetPassword::toMailUsing(function (object $notifiable, string $token) {
-            $url = env('FRONT_END_URL') . 'reset-password?token=' . $token;
+            Log::info("entro en mail");
+            $url = env('FRONT_END_URL') . 'password/reset?token=' . $token;
             $mail = (new MailMessage)
                 ->greeting('Hola! ' . $notifiable->name)
                 ->subject('Cambio de Contraseña')
