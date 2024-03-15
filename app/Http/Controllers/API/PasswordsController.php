@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Response;
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Support\Facades\Auth;
 
 class PasswordsController extends Controller
 {
@@ -51,8 +52,9 @@ class PasswordsController extends Controller
             function (User $user, string $password) {
                 $user->forceFill([
                     'password' => Hash::make($password)
-                ])->setRememberToken(Str::random(60));
-
+                ]);
+                //->setRememberToken(Str::random(100));
+    
                 $user->save();
 
                 event(new PasswordReset($user));
@@ -62,5 +64,29 @@ class PasswordsController extends Controller
         return $status === Password::PASSWORD_RESET
             ? response()->json(['status' => __($status)], Response::HTTP_OK)
             : response()->json(['email' => [__($status)]], Response::HTTP_BAD_REQUEST);
+    }
+
+    //Change password , si estas logado y conoces tu  ocntraseña anterior
+    public function change_password(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|min:8|different:current_password|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).+$/',
+        ]);
+        if (Auth::check()) {
+            $user = Auth::user();
+            if (!Hash::check($request->input('current_password'), $user->password)) {
+                return response()->json(['error' => 'Current password is incorrect'], Response::HTTP_BAD_REQUEST);
+            }
+            $user->forceFill([
+                'password' => Hash::make($request->input('new_password')),
+            ]);
+            $user->save();
+            //Auth::logout();
+            $user->tokens()->delete();
+            return response()->json(['message' => 'Password changed successfully'], Response::HTTP_OK);
+        }
+
+        return response()->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
     }
 }

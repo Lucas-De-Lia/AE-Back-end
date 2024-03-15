@@ -23,11 +23,6 @@ class User extends Authenticatable implements MustVerifyEmail, CanResetPassword
         return $this->hasOne(EmailToVErify::class);
     }
 
-    public function forgotpassword()
-    {
-        return $this->hasOne(PasswordResets::class);
-    }
-
     /**
      * The attributes that are mydatabasemass assignable.
      *

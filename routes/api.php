@@ -17,12 +17,7 @@ Route::prefix('auth')->group(function () {
     Route::post('logout', [AuthController::class, 'logout']);
     Route::post('refresh', [AuthController::class, 'refresh']);
 
-    //Route::post('/email/verify/send', [AuthController::class, 'email_send_code']);
-    //Route::post('/email/verify/confirm', [AuthController::class, 'verify_code_email']);
-
-    //Route::post('/forgot-password', [AuthController::class, 'forgot_password']);
-    //Route::post('/reset-password', [AuthController::class, 'reset_password']);
-    //Route::post('/change-password', [AuthController::class, 'change_password']);
+    //;
 });
 
 Route::prefix('password')->group(function () {
@@ -32,6 +27,7 @@ Route::prefix('password')->group(function () {
 
     Route::post('forgot', [PasswordsController::class, 'forgot_password'])->name('password.email');
     Route::post('reset', [PasswordsController::class, 'reset_password'])->name('password.update');
+    Route::post('/change-password', [PasswordsController::class, 'change_password']);
 });
 
 Route::prefix('email')->group(function () {
