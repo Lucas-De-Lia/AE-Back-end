@@ -48,7 +48,13 @@ class AuthController extends Controller
             $token = $user->createToken('token-name')->plainTextToken;
 
             return response()->json([
-                'user' => $user->only(['name', 'email', 'cuil', 'email_verified_at']),
+                'user' => [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'email_verified_at' => $user->email_verified_at,
+                    'cuil' => $user->cuil,
+                    'ae' => AeController::$AE['NON_AE']
+                ],
                 'authorization' => [
                     'token' => $token,
                     'type' => 'Bearer ',
@@ -163,7 +169,13 @@ class AuthController extends Controller
             $user = Auth::user();
 
             return response()->json([
-                'user' => $user->only(['name', 'email', 'cuil', 'email_verified_at']),
+                'user' => [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'email_verified_at' => $user->email_verified_at,
+                    'cuil' => $user->cuil,
+                    'ae' => AeController::$AE['NON_AE']
+                ],
             ], Response::HTTP_CREATED);
         }
         return response()->json([
