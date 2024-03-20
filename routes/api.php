@@ -38,7 +38,7 @@ Route::prefix('email')->group(function () {
 
     Route::post('verify/{id}/{hash}', [EmailVerifyController::class, 'email_verify'])->name('verification.verify');
 
-    Route::post('verification-notification', [EmailVerifyController::class, 'email_send'])->name('verification.resend');
+    Route::post('notification', [EmailVerifyController::class, 'email_send'])->name('verification.resend');
 });
 
 
