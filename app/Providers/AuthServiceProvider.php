@@ -45,7 +45,6 @@ class AuthServiceProvider extends ServiceProvider
         });*/
 
         ResetPassword::toMailUsing(function (object $notifiable, string $token) {
-            Log::info("entro en mail");
             $url = env('FRONT_END_URL') . 'password/reset?token=' . $token;
             $mail = (new MailMessage)
                 ->greeting('Hola! ' . $notifiable->name)

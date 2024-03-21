@@ -7,10 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use \App\Notifications\CustomVerifyEmail;
+;
 use App\Models\EmailToVerify;
-use App\Models\PasswordResets;
-use App\Notifications\ResetPasswordNotification;
+
 use Illuminate\Contracts\Auth\CanResetPassword;
 
 class User extends Authenticatable implements MustVerifyEmail, CanResetPassword

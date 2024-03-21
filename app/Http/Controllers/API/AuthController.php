@@ -5,15 +5,10 @@ namespace App\Http\Controllers\API;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Models\EmailToVerify;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-use App\Jobs\SendMailForgotPassJob;
-use App\Jobs\SendMailCodeJob;
-use Illuminate\Support\Str;
 use Illuminate\Auth\Events\Registered;
 
 class AuthController extends Controller
