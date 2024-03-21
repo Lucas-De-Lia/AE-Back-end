@@ -4,21 +4,11 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\PdfFile;
-use App\Models\Image;
 use App\Models\News;
 use App\Models\Question;
 use Illuminate\Http\Response;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-
-use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Gd\Driver;
-use Intervention\Image\Decoders\FilePathImageDecoder;
-use Intervention\Image\Decoders\DataUriImageDecoder;
-use Intervention\Image\Decoders\Base64ImageDecoder;
-use Intervention\Image\Encoders\WebpEncoder;
 
 
 class GuestController extends Controller
@@ -46,7 +36,7 @@ class GuestController extends Controller
 
         // Start a database transaction
         DB::beginTransaction();
-        try{
+        try {
             // Create a new news entry with the provided title and abstract
             $news = News::create([
                 'title' => $request->title,
@@ -55,7 +45,7 @@ class GuestController extends Controller
 
             // Store the uploaded image and associate it with the news entry
             $image = $request->file('image')->store('public/images');
-            $news->image()->create(['url' =>  str_replace('public/', 'storage/', $image)]);
+            $news->image()->create(['url' => str_replace('public/', 'storage/', $image)]);
 
             // Store the uploaded PDF and associate it with the news entry
             $pdf = $request->file('pdf')->store('public/pdfs');
@@ -67,7 +57,7 @@ class GuestController extends Controller
             DB::commit();
             return response()->json(['message' => 'PDF uploaded successfully'], Response::HTTP_OK);
 
-        }catch(\Exception $e){
+        } catch (\Exception $e) {
             // Roll back the transaction and return an error response
             DB::rollback();
             return response()->json(['error' => $e->getMessage()], 500);
@@ -97,7 +87,7 @@ class GuestController extends Controller
             return [
                 'id' => $news->id,
                 'title' => $news->title,
-                'image' => "/".$news->image->url,
+                'image' => "/" . $news->image->url,
                 'abstract' => $news->abstract
             ];
         })->all();
@@ -113,10 +103,10 @@ class GuestController extends Controller
 
         try {
             $newss = News::findOrFail($request->id);
-            return response()->json ([
+            return response()->json([
                 'id' => $newss->id,
                 'title' => $newss->title,
-                'pdf' => "/". $newss->pdfFile->file_path,
+                'pdf' => "/" . $newss->pdfFile->file_path,
             ], Response::HTTP_OK);
         } catch (ModelNotFoundException $e) {
             return response()->json([

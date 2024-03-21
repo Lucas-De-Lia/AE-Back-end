@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use \App\Notifications\CustomVerifyEmail;
+;
 use App\Models\EmailToVerify;
-use App\Models\PasswordResets;
 
-class User extends Authenticatable implements MustVerifyEmail
+use Illuminate\Contracts\Auth\CanResetPassword;
+
+class User extends Authenticatable implements MustVerifyEmail, CanResetPassword
 {
     use HasApiTokens, HasFactory, Notifiable;
     protected $username = 'cuil';
@@ -19,10 +20,6 @@ class User extends Authenticatable implements MustVerifyEmail
     public function emailToVerify()
     {
         return $this->hasOne(EmailToVErify::class);
-    }
-
-    public function forgotpassword(){
-        return $this->hasOne(PasswordResets::class);
     }
 
     /**
@@ -65,7 +62,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function hasVerifiedEmail()
     {
-        return $this->email_verified_at!== null;
+        return $this->email_verified_at !== null;
     }
 
     /**
@@ -75,18 +72,13 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function markEmailAsVerified()
     {
-        $this->email_verified_at = now();
-        $this->save();
+        try {
+            $this->email_verified_at = now();
+            $this->save();
+        } catch (\Exception $e) {
+            return false;
+        }
         return true;
-    }
-    /**
-     * Send the email verification notification.
-     *
-     * @return void
-     */
-    public function sendEmailVerificationNotification()
-    {
-        $this->notify(new VerifyEmailNotification);
     }
 
     /**
