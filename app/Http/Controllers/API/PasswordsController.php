@@ -11,28 +11,31 @@ use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Auth;
 
+use Illuminate\Support\Facades\Log;
+
 class PasswordsController extends Controller
 {
     public function __construct()
     {
         // Rate limit the number of requests from any user to prevent server overload, with a maximum of 100 requests per minute.
         $this->middleware(['throttle:api']);
-        // Apply 'verified' middleware to all methods except the specified ones
-        //$this->middleware(['verified']);
-        //$this->middleware(['auth:sanctum'], ['except' => ['forgot_password', 'forgot_password']]);
+        $this->middleware(['auth:sanctum'], ['except' => ['forgot_password', 'forgot_password']]);
 
     }
     public function forgot_password(Request $request)
     {
         $request->validate(['cuil' => 'exists:users,cuil']);
         $user = User::whereCuil($request->cuil)->first();
-        if ($user && $user->hasVerifiedEmail()) {
+        if ($user->hasVerifiedEmail()) {
+            return response()->json(['email' => __('Error')], Response::HTTP_BAD_REQUEST);
+        }
+        Log::info($user);
+        if ($user) {
             $status = Password::sendResetLink($user->only('email'));
+            Log::info($status);
             return $status == Password::RESET_LINK_SENT
                 ? response()->json(['status' => __($status)], Response::HTTP_OK)
-                : response()->json(['email' => __($status)], Response::HTTP_BAD_REQUEST);
-        } elseif (!$user) {
-            return response()->json(['cuil' => __('Error')], Response::HTTP_BAD_REQUEST);
+                : response()->json(['status' => __($status)], Response::HTTP_BAD_REQUEST);
         }
 
 
@@ -72,20 +75,18 @@ class PasswordsController extends Controller
             'current_password' => 'required',
             'new_password' => 'required|min:8|different:current_password|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).+$/',
         ]);
-        if (Auth::check()) {
-            $user = Auth::user();
-            if (!Hash::check($request->input('current_password'), $user->password)) {
-                return response()->json(['error' => 'Current password is incorrect'], Response::HTTP_BAD_REQUEST);
-            }
-            $user->forceFill([
-                'password' => Hash::make($request->input('new_password')),
-            ]);
-            $user->save();
-            //Auth::logout();
-            $user->tokens()->delete();
-            return response()->json(['message' => 'Password changed successfully'], Response::HTTP_OK);
-        }
 
-        return response()->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        $user = Auth::user();
+        if (!Hash::check($request->input('current_password'), $user->password)) {
+            return response()->json(['error' => 'Current password is incorrect'], Response::HTTP_BAD_REQUEST);
+        }
+        $user->forceFill([
+            'password' => Hash::make($request->input('new_password')),
+        ]);
+        $user->save();
+        //Auth::logout();
+        $user->tokens()->delete();
+        return response()->json(['message' => 'Password changed successfully'], Response::HTTP_OK);
+
     }
 }

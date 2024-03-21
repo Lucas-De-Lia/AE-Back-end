@@ -16,18 +16,16 @@ Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('logout', [AuthController::class, 'logout']);
     Route::post('refresh', [AuthController::class, 'refresh']);
-
-    //;
 });
 
 Route::prefix('password')->group(function () {
-    Route::get('/reset-password/{token}', function (string $token) {//esto es necesario para enviar el link pero no se usa
+    Route::get('reset-password/{token}', function (string $token) {//esto es necesario para enviar el link pero no se usa
         return response()->json(['status' => false]); //esto es necesario para enviar el link pero no se usa
     })->middleware('guest')->name('password.reset'); //esto es necesario para enviar el link pero no se usa
 
     Route::post('forgot', [PasswordsController::class, 'forgot_password'])->name('password.email');
     Route::post('reset', [PasswordsController::class, 'reset_password'])->name('password.update');
-    Route::post('/change-password', [PasswordsController::class, 'change_password']);
+    Route::post('change', [PasswordsController::class, 'change_password']);
 });
 
 Route::prefix('email')->group(function () {
