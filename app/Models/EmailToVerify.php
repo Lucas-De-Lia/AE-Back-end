@@ -10,9 +10,9 @@ class EmailToVerify extends Model
     use HasFactory;
     protected $table = 'email_to_verify';
 
-    protected $username = 'email';
-    protected $fillable = ['email', 'code'];
-    
+    protected $username = 'new_email';
+    protected $fillable = ['new_email'];
+
     public function user()
     {
         return $this->belongsTo(User::class);

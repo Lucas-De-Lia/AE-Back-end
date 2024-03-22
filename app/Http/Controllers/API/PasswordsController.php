@@ -29,7 +29,6 @@ class PasswordsController extends Controller
         if ($user->hasVerifiedEmail()) {
             return response()->json(['email' => __('Error')], Response::HTTP_BAD_REQUEST);
         }
-        Log::info($user);
         if ($user) {
             $status = Password::sendResetLink($user->only('email'));
             Log::info($status);

@@ -35,8 +35,8 @@ Route::prefix('email')->group(function () {
     })->middleware('auth:api')->name('verification.notice');
 
     Route::post('verify/{id}/{hash}', [EmailVerifyController::class, 'email_verify'])->name('verification.verify');
-
     Route::post('notification', [EmailVerifyController::class, 'email_send'])->name('verification.resend');
+    Route::post('change', [EmailVerifyController::class, 'email_change']);
 });
 
 
