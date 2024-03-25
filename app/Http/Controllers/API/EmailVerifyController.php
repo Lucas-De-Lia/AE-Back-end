@@ -62,24 +62,18 @@ class EmailVerifyController extends Controller
     public function email_change(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|unique:users,email|unique:email_to_verify,new_email',
+            'email' => 'required|email|unique:users,email',
             'current_password' => 'required'
         ]);
         $user = $request->user();
         if (!Hash::check($request->input('current_password'), $user->password)) {
             return response()->json(['error' => 'Current password is incorrect'], Response::HTTP_BAD_REQUEST);
         }
-        Log::info($user);
-        $emailToVerify = EmailToVerify::create([
-            'user_id' => $user->id,
-            'new_email' => $request->email,
-            'token' => Str::random(60),
-        ]);
-
-        $user->email = $request->email;
-        //      ignacioromang@outlook.com
-        //event(new Verified($user));
-        $user->sendEmailVerificationNotification($emailToVerify->token);
-        return response()->json(['message' => 'Verification send'], Response::HTTP_OK);
+        if ($user->email != $request->input('email')) {
+            $user->forceFill(["email" => $request->input('email'), 'email_verified_at' => null]);
+            $user->save();
+            $user->sendEmailVerificationNotification();
+        }
+        return response()->json(['message' => 'Verification send successfully'], Response::HTTP_OK);
     }
 }
