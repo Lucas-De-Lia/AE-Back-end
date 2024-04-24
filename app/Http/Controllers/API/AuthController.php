@@ -94,7 +94,7 @@ class AuthController extends Controller
             'startdate' => 'required|date',
             'occupation' => 'nullable|string|max:4', // Consider providing more specific validation
             'study' => 'nullable|string|max:4',  // Consider providing more specific validation
-            'email' => 'required|string|email|max:255|unique:users|unique:email_to_verify',
+            'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
             'renewvaldate' => 'nullable|date',
             'dni1' => 'required|file|max:2048',
@@ -113,17 +113,6 @@ class AuthController extends Controller
         try {
             // Create a new user
             $user = User::create($data);
-
-            // Create a new email verification record
-            /*
-            $emailToVerify = new EmailToVerify([
-                'email' => $request->email,
-                'code' => self::str_random(10),
-            ]);
-            $user->emailToVerify()->save($emailToVerify);
-            */
-            // Send the verification email event(register)->email
-            // Register an AE (whatever that stands for) - consider providing more information in the comment
             $ae = AeController::register_ae($request);
             event(new Registered($user));
             // Commit the database transaction

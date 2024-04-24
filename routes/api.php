@@ -51,7 +51,7 @@ Route::prefix('ae')->group(function () {
 });
 
 Route::prefix('resources')->group(function () {
-    Route::post('upload-pdf-document', [GuestController::class, 'uploadPdfDocument']);
+    Route::get('post-pdf-document', [GuestController::class, 'uploadPdfDocument']);
     Route::post('get-news-list', [GuestController::class, 'getNewsList']);
     Route::post('get-news-pdf', [GuestController::class, 'getNewsPdf']);
 
