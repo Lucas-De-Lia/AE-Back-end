@@ -39,7 +39,6 @@ Route::prefix('email')->group(function () {
     Route::post('change', [EmailVerifyController::class, 'email_change']);
 });
 
-
 Route::prefix('ae')->group(function () {
     Route::get('dates', [AeController::class, 'get_calendar_dates']);
     Route::get('fetch-start-pdf', [AeController::class, 'fetch_start_pdf']);
@@ -51,7 +50,7 @@ Route::prefix('ae')->group(function () {
 });
 
 Route::prefix('resources')->group(function () {
-    Route::get('post-pdf-document', [GuestController::class, 'uploadPdfDocument']);
+    Route::post('post-pdf-document', [GuestController::class, 'uploadPdfDocument']);
     Route::post('get-news-list', [GuestController::class, 'getNewsList']);
     Route::post('get-news-pdf', [GuestController::class, 'getNewsPdf']);
 

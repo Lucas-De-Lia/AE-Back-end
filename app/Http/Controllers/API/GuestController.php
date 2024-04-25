@@ -10,6 +10,8 @@ use Illuminate\Http\Response;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 
+use Illuminate\Support\Facades\Log;
+
 
 class GuestController extends Controller
 {
@@ -27,13 +29,13 @@ class GuestController extends Controller
     public function uploadPdfDocument(Request $request)
     {
         // Validate the incoming request data
+        
         $request->validate([
             'title' => 'required|string',
             'abstract' => 'required|string',
             'pdf' => 'required|mimes:pdf|max:2048', // Validate that the file is a valid PDF
             'image' => 'required|image|mimes:webp|max:2048', // Validate that the file is a valid image
         ]);
-
         // Start a database transaction
         DB::beginTransaction();
         try {
