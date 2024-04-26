@@ -53,7 +53,7 @@ class EmailVerifyController extends Controller
     {
         $user = $request->user();
         if ($request->user()->hasVerifiedEmail()) {
-            return response()->json('User already have verified email', Response::HTTP_BAD_REQUEST);
+            return response()->json(['message' =>'User already have verified email'], Response::HTTP_BAD_REQUEST);
         }
         $user->sendEmailVerificationNotification();
         return response()->json(['message' => 'Verification send'], Response::HTTP_OK);
