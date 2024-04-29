@@ -30,7 +30,7 @@ Route::prefix('password')->group(function () {
 
 Route::prefix('email')->group(function () {
     //rename functions
-    Route::get('verify', function () {
+    Route::get('verify-notice', function () {
         return response()->json(['status' => false]);
     })->middleware('auth:api')->name('verification.notice');
 

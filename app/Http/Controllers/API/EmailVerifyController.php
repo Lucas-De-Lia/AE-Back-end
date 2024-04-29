@@ -28,6 +28,7 @@ class EmailVerifyController extends Controller
     {
         try {
             DB::beginTransaction();
+
             if ($request->user()->hasVerifiedEmail()) {
                 return response()->json([
                     'message' => 'Email already Verified'

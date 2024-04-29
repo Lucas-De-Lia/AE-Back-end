@@ -32,6 +32,8 @@ class AeController extends Controller
         if (Auth::check()) {
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");
+            Log::info( $url);
+            
             $user = Auth::user();
             $DNI = AeController::getDNI($user->cuil);
 
@@ -47,6 +49,7 @@ class AeController extends Controller
             }
 
             // Decode the JSON response
+            Log::info($response);
             $data = $response->json();
 
             // Check for JSON decoding errors
@@ -139,7 +142,7 @@ class AeController extends Controller
                 'API-Token' => $token,
                 'X-API-Key' => env('APP_SISTEMON_KEY'),
             ])->post($url . '/agregar', $postData);
-            Log::info(json_encode($response->json()));
+            
             return $response;
 
         } catch (Exception $e) {
@@ -233,7 +236,6 @@ class AeController extends Controller
             if ($user->name !== $newName) {
                 // El nombre cambió
                 $partes = explode(", ", $user->name);
-                Log::info($partes);
                 $newName = $request->firstname;
 
                 if ($partes[0] !== $request->firstname) {
@@ -334,13 +336,13 @@ class AeController extends Controller
             $token = env("API_TOKEN_AE");
             $user = Auth::user();
             $dni = AeController::getDNI($user->cuil);
-            //Log::info(json_encode($postData));
+            
             $response = Http::withHeaders([
                 'X-API-Key' => env('APP_SISTEMON_KEY'),
                 'API-Token' => $token,
                 'Content-Type' => 'application/json',
             ])->get($url . '/constancia/reingreso/' . $dni);
-            //Log::info(json_encode($response.data.content));
+            
             $content = $response->json()["content"];
             return response()->json(["content" => $content]);
         }
@@ -354,13 +356,12 @@ class AeController extends Controller
             $token = env("API_TOKEN_AE");
             $user = Auth::user();
             $dni = AeController::getDNI($user->cuil);
-            //Log::info(json_encode($postData));
+            
             $response = Http::withHeaders([
                 'X-API-Key' => env('APP_SISTEMON_KEY'),
                 'API-Token' => $token,
                 'Content-Type' => 'application/json',
             ])->get($url . '/constancia/alta/' . $dni);
-            Log::info(json_encode($response));
             $content = $response->json()["content"];
             return response()->json(["content" => $content]);
         }

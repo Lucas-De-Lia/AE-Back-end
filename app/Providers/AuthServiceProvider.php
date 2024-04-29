@@ -28,7 +28,7 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         VerifyEmail::toMailUsing(function (object $notifiable, string $url) {
-            $dom = env('APP_URL') . "api/";
+            $dom = env('APP_URL') . "/api/";
             $newUrl = str_replace($dom, env('FRONT_END_URL'), $url);
             $mail = (new MailMessage)
                 ->greeting('Hola! ' . $notifiable->name)
