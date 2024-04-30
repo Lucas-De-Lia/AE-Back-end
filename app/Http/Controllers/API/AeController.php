@@ -49,7 +49,6 @@ class AeController extends Controller
             }
 
             // Decode the JSON response
-            Log::info($response);
             $data = $response->json();
 
             // Check for JSON decoding errors

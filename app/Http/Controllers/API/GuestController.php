@@ -71,10 +71,14 @@ class GuestController extends Controller
     public function getQuestionList()
     {
         $questions = Question::all();
-
-        return $questions->isEmpty()
-            ? response()->json(['message' => 'No questions found'], Response::HTTP_NOT_FOUND)
-            : response()->json($questions, Response::HTTP_OK);
+        if($questions->isEmpty()){
+            return response()->json(['message' => 'No questions found']);
+        }
+        $questions->transform(function ($question) {
+            $question->answers = json_decode($question->answers);
+            return $question;
+        });
+        return response()->json($questions, Response::HTTP_OK);
     }
 
     /**
@@ -116,4 +120,18 @@ class GuestController extends Controller
             ], Response::HTTP_NOT_FOUND);
         }
     }
+    
+    public function uploadQuestions(Request $request){
+        $request->validate(["title" => "required|string", "bodyQ"=> "required|string"]);
+        $newBody = explode("\n", $request->bodyQ);
+        $newBody = array_map('trim', $newBody);
+        $newBody = array_values(array_filter($newBody));
+        $asList = json_encode($ewBody);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return response()->json('Error decoding JSON response: ' . json_last_error_msg(), Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+        $question = Question::create([
+            'question'=> $request->title, 'answers' => $asList
+        ]);
+    }   
 }
