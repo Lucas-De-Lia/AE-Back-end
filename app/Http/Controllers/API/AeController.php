@@ -32,8 +32,7 @@ class AeController extends Controller
         if (Auth::check()) {
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");
-            Log::info( $url);
-            
+          
             $user = Auth::user();
             $DNI = AeController::getDNI($user->cuil);
 
@@ -42,7 +41,6 @@ class AeController extends Controller
                 'API-Token' => $token,
                 'X-API-Key' => env('APP_SISTEMON_KEY'),
             ])->get($url . '/fechas/' . (string) $DNI);
-
             // Check for any HTTP errors
             if ($response->failed()) {
                 return response()->json('Error when making API request: ' . $response->status(), Response::HTTP_BAD_REQUEST);
@@ -83,7 +81,6 @@ class AeController extends Controller
                 'dates' => $dates,
             ];
 
-            //Log::info(json_encode($data));
 
             return response()->json($response, Response::HTTP_OK);
         }
