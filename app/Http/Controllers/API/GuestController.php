@@ -108,11 +108,19 @@ class GuestController extends Controller
         ]);
 
         try {
-            $newss = News::findOrFail($request->id);
+            $news = News::findOrFail($request->id);
+            $filePath = storage_path('app/public/' . $news->pdfFile->file_path);
+
+            if (!$news->pdfFile || !file_exists(storage_path('app/' . str_replace('storage/', 'public/', $news->pdfFile->file_path)))) {
+                return response()->json(['error' => 'File not found.'], 404);
+            }
+            $filePath = storage_path('app/' . str_replace('storage/', 'public/', $news->pdfFile->file_path));
+            $fileContent = file_get_contents($filePath);
+            $base64File = base64_encode($fileContent);
             return response()->json([
-                'id' => $newss->id,
-                'title' => $newss->title,
-                'pdf' => "/" . $newss->pdfFile->file_path,
+                'id' => $news->id,
+                'title' => $news->title,
+                'pdf' => $base64File,
             ], Response::HTTP_OK);
         } catch (ModelNotFoundException $e) {
             return response()->json([
