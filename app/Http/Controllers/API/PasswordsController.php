@@ -26,7 +26,7 @@ class PasswordsController extends Controller
     {
         $request->validate(['cuil' => 'exists:users,cuil']);
         $user = User::whereCuil($request->cuil)->first();
-        if ($user->hasVerifiedEmail()) {
+        if (!$user->hasVerifiedEmail()) {
             return response()->json(['email' => __('Error')], Response::HTTP_BAD_REQUEST);
         }
         if ($user) {

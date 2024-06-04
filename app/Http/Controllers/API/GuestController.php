@@ -9,7 +9,7 @@ use App\Models\Question;
 use Illuminate\Http\Response;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
-
+use setasign\Fpdi\Tcpdf\Fpdi;
 use Illuminate\Support\Facades\Log;
 
 
@@ -46,11 +46,13 @@ class GuestController extends Controller
             ]);
 
             // Store the uploaded image and associate it with the news entry
+
             $image = $request->file('image')->store('public/images');
             $news->image()->create(['url' => str_replace('public/', 'storage/', $image)]);
 
             // Store the uploaded PDF and associate it with the news entry
             $pdf = $request->file('pdf')->store('public/pdfs');
+
             $news->pdfFile()->create([
                 'title' => $request->title,
                 'file_path' => str_replace('public/', 'storage/', $pdf)
@@ -114,13 +116,13 @@ class GuestController extends Controller
             if (!$news->pdfFile || !file_exists(storage_path('app/' . str_replace('storage/', 'public/', $news->pdfFile->file_path)))) {
                 return response()->json(['error' => 'File not found.'], 404);
             }
-            $filePath = storage_path('app/' . str_replace('storage/', 'public/', $news->pdfFile->file_path));
-            $fileContent = file_get_contents($filePath);
-            $base64File = base64_encode($fileContent);
+            //$filePath = storage_path('app/' . str_replace('storage/', 'public/', $news->pdfFile->file_path));
+            //$fileContent = file_get_contents($filePath);
+            //$base64File = base64_encode($fileContent);
             return response()->json([
                 'id' => $news->id,
                 'title' => $news->title,
-                'pdf' => $base64File,
+                'pdf' => $news->pdfFile->file_path,
             ], Response::HTTP_OK);
         } catch (ModelNotFoundException $e) {
             return response()->json([
