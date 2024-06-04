@@ -77,4 +77,18 @@ class EmailVerifyController extends Controller
         }
         return response()->json(['message' => 'Verification send successfully'], Response::HTTP_OK);
     }
+
+    public function email_send_by_root(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|unique:users,email',
+        ]);
+        $email = $request->input('email');
+        $user = User::where('email', $email)->first();
+        if ($user->hasVerifiedEmail()) {
+            return response()->json(['message' =>'User already have verified email'], Response::HTTP_BAD_REQUEST);
+        }
+        $user->sendEmailVerificationNotification();
+        return response()->json(['message' => 'Verification send'], Response::HTTP_OK);
+    }
 }
