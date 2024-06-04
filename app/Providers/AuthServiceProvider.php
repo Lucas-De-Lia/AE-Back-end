@@ -36,18 +36,13 @@ class AuthServiceProvider extends ServiceProvider
                 ->line("¡Gracias por confiar en nosotros!")
                 ->line("Para garantizar la seguridad de tu cuenta, necesitamos verificar tu dirección de correo electrónico.")
                 ->line('Para proceder, haz clic en el botón de abajo para verificar tu dirección de correo electrónico.')
-                ->line('Recuerda que este enlace es válido por un tiempo limitado por razones de seguridad.')
                 ->action('Verificar Email', $newUrl)
+                ->line('Recuerda que este enlace es válido por un tiempo limitado por razones de seguridad.')
                 ->line("Si no has intentado verificar tu dirección de correo electrónico, por favor ignora este correo o contáctanos de inmediato.")
                 ->line("Gracias por tu atención y comprensión.")
                 ->salutation("Atentamente, Departamento de Casinos");
             return $mail;
         });
-
-        /*
-        ResetPassword::createUrlUsing(function (User $user, string $token) {
-            return env('FRONT_END_URL') . 'reset-password?token=' . $token;
-        });*/
 
         ResetPassword::toMailUsing(function (object $notifiable, string $token) {
             $url = env('FRONT_END_URL') . 'password/reset?token=' . $token;
@@ -56,8 +51,8 @@ class AuthServiceProvider extends ServiceProvider
                 ->subject('Cambio de Contraseña')
                 ->line("¡Gracias por confiar en nosotros!")
                 ->line("Hemos recibido una solicitud para restablecer la contraseña de tu cuenta. Para proceder, haz clic en el botón de abajo para restablecer tu contraseña de correo electrónico.")
-                ->line('Recuerda que este enlace es válido por un tiempo limitado por razones de seguridad.')
                 ->action('Cambiar Contraseña', $url)
+                ->line('Recuerda que este enlace es válido por un tiempo limitado por razones de seguridad.')
                 ->line("Si no solicitaste restablecer tu contraseña, por favor ignora este correo o contáctanos de inmediato.")
                 ->line("Gracias por tu atención y comprensión.")
                 ->salutation("Atentamente, Departamento de Casinos");
