@@ -38,7 +38,6 @@ class AuthServiceProvider extends ServiceProvider
                 ->line('Para proceder, haz clic en el botón de abajo para verificar tu correo.')
                 ->action('Verificar Email', $newUrl)
                 ->line('Recuerda que este enlace es válido por un tiempo limitado por razones de seguridad.')
-                ->table([['Nombre' => $notifiable->name, 'Correo' => $notifiable->email]])
                 ->line("Si no has intentado verificar tu dirección de correo electrónico, por favor ignora este correo o contáctanos de inmediato.")
                 ->line("Gracias por tu atención y comprensión.")
                 ->salutation("Atentamente, Departamento de Casinos");
