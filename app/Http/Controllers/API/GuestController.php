@@ -9,9 +9,10 @@ use App\Models\Question;
 use Illuminate\Http\Response;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
-use setasign\Fpdi\Tcpdf\Fpdi;
 use Illuminate\Support\Facades\Log;
-
+use Illuminate\Support\Facades\Storage;
+use Spatie\Image\Image;
+use mikehaertl\pdftk\Pdf;
 
 class GuestController extends Controller
 {
@@ -47,8 +48,17 @@ class GuestController extends Controller
 
             // Store the uploaded image and associate it with the news entry
 
-            $image = $request->file('image')->store('public/images');
-            $news->image()->create(['url' => str_replace('public/', 'storage/', $image)]);
+            $image = $request->file('image');
+            $imagePath = $image->store('public/images');
+
+            if (!Storage::exists('public/images')) {
+                Storage::makeDirectory('public/images');
+            }
+
+            $imageM =Image::load(storage_path('app/' . $imagePath));
+            $imageM->resize(1920, 1080)->optimize()->save(storage_path('app/' . $imagePath));
+
+            $news->image()->create(['url' => str_replace('public/', 'storage/', $imagePath)]);
 
             // Store the uploaded PDF and associate it with the news entry
             $pdf = $request->file('pdf')->store('public/pdfs');

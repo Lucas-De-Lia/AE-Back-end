@@ -15,7 +15,8 @@
         "laravel/framework": "^10.10",
         "laravel/sanctum": "^3.3",
         "laravel/tinker": "^2.8",
-        "setasign/fpdi": "^2.6",
+        "mikehaertl/php-pdftk": "^0.13.1",
+        "spatie/image": "^3.6",
         "symfony/http-client": "^7.0",
         "symfony/mailgun-mailer": "^7.0",
         "tecnickcom/tc-lib-pdf": "^8.0"
