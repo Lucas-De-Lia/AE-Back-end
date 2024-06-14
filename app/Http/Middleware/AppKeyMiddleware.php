@@ -15,7 +15,7 @@ class AppKeyMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->header('X-API-Key') !== env("APP_KEY")) {
+        if ($request->header('X-API-Key') !== env("APP_X_API_KEY")) {
             return response()->json(['error' => 'Key de API inválida'], 401);
         }
 
