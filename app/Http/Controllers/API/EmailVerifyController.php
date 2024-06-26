@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Models\EmailToVerify;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Response;
-use App\Models\EmailToVerify;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
@@ -18,10 +19,10 @@ class EmailVerifyController extends Controller
     public function __construct()
     {
         // Rate limit the number of requests from any user to prevent server overload, with a maximum of 100 requests per minute.
-        $this->middleware(['throttle:api']);
+        $this->middleware(['throttle:api'], ['except' => ["email_send_by_root"]]);
         // Apply 'verified' middleware to all methods except the specified ones.
-        $this->middleware(['verified'], ['except' => ['email_verify', 'email_send']]);
-        $this->middleware('auth:sanctum');
+        $this->middleware(['verified'], ['except' => ['email_verify', 'email_send',"email_send_by_root"]]);
+        $this->middleware('auth:sanctum', ['except' => ["email_send_by_root"]]);
 
     }
     public function email_verify(EmailVerificationRequest $request)
@@ -81,7 +82,7 @@ class EmailVerifyController extends Controller
     public function email_send_by_root(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|unique:users,email',
+            'email' => 'required|email|exists:users,email',
         ]);
         $email = $request->input('email');
         $user = User::where('email', $email)->first();
