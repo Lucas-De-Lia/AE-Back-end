@@ -117,10 +117,16 @@ class AuthController extends Controller
             event(new Registered($user));
             // Commit the database transaction
             DB::commit();
+            $token = $user->createToken('token-name')->plainTextToken;
 
             // Return a JSON response
             return response()->json([
                 'message' => 'User created successfully',
+                'authorization' => [
+                    'token' => $token,
+                    'type' => 'Bearer ',
+                    'X_CSRF_TOKEN' => csrf_token()
+                ]
             ], Response::HTTP_CREATED);
         } catch (\Exception $e) {
             // Rollback the database transaction and return an error response
