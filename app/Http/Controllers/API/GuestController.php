@@ -79,8 +79,6 @@ class GuestController extends Controller
         }
     }
 
-
-
     public function getQuestionList()
     {
         $questions = Question::all();
@@ -99,19 +97,23 @@ class GuestController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getNewsList()
+    public function getNewsList(Request $request)
     {
         // Retrieve all news articles and map them to a new format
-        $newsList = News::all()->map(function ($news) {
-            return [
-                'id' => $news->id,
-                'title' => $news->title,
-                'image' => "/" . $news->image->url,
-                'abstract' => $news->abstract
-            ];
-        })->all();
-
-        // Return the news list as a JSON response
+        $sort_by = ['colum' => 'id', 'order' => 'ASC'];
+        if(!empty($request->sort_by)){
+          $sort_by = $request->sort_by;
+        }
+        $page_size = 2;
+        if(!empty($request->page_size)){
+            $page_size = $request->page_size;
+        }
+        $newsList = DB::table("news")
+            ->orderBy($sort_by['colum'],$sort_by['order'])
+            ->join("images", "news.id", "=", "images.news_id")
+            ->join("pdf_files", "news.id", "=", "pdf_files.news_id")
+            ->select('news.*', 'images.url', 'pdf_files.file_path')
+            ->paginate($page_size);
         return response()->json($newsList, Response::HTTP_OK);
     }
     public function getNewsPdf(Request $request)
