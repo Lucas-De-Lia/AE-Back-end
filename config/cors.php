@@ -17,9 +17,9 @@ return [
 
     'paths' => ['api/*', 'sanctum/csrf-cookie', 'storage/pdfs/*'],
 
-    'allowed_methods' => ['*'],
+    'allowed_methods' => ['*','GET'],
 
-    'allowed_origins' => ['*','10.1.120.0/23','0.0.0.0/0','http://localhost:3000','http://127.0.0.1:3000','http://10.1.121.24:3000'],
+    'allowed_origins' => ['*','http://10.1.120.0/23','http://10.1.121.24:8001','http://localhost:8001','http://127.0.0.1:8001','http://localhost:3000','http://127.0.0.1:3000','http://10.1.121.24:3000'],
 
     'allowed_origins_patterns' => [],
 

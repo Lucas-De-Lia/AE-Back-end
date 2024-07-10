@@ -54,7 +54,8 @@ Route::prefix('resources')->group(function () {
     Route::post('post-pdf-document', [GuestController::class, 'uploadPdfDocument']);
     Route::post('get-news-list', [GuestController::class, 'getNewsList']);
     Route::post('get-news-pdf', [GuestController::class, 'getNewsPdf']);
-
+    Route::post('remove-news', [GuestController::class, 'removePdfDocument']);
     Route::get('getQuestions', [GuestController::class, 'getQuestionList']);
     Route::post('post-new-question',[GuestController::class, 'uploadQuestions']);
+    Route::post('update-news',[GuestController::class, 'editNews']);
 });
