@@ -63,9 +63,7 @@ class GuestController extends Controller
         if (!Storage::exists('public/images')) {
             Storage::makeDirectory('public/images');
         }
-
         $imagePath = 'public/images/' .uniqid() . '_' . time() . '.' .  $image->getClientOriginalName();
-        
         $imageM =Image::read($image);
         $imageM->resize(1920, 1080)->toWebp(100)->save(storage_path('app/' . $imagePath));
         return $imagePath;
@@ -84,7 +82,6 @@ class GuestController extends Controller
         $request->validate([
             'id' => 'required',
         ]);
-
         try {
             $news = News::findOrFail($request->id);
             if(!$news){
@@ -92,7 +89,6 @@ class GuestController extends Controller
             }
             $filePathPDF =  $news->pdfFile->file_path;
             $filePathImage =  $news->image->url;
-
             $pdfExist= !$news->pdfFile || !file_exists(storage_path('app/' . str_replace('storage/', 'public/', $news->pdfFile->file_path)));
             $imageExist = !$news->image || !file_exists(storage_path('app/' . str_replace('storage/', 'public/', $news->image->url)));
             if ($pdfExist || $imageExist) {
@@ -102,8 +98,7 @@ class GuestController extends Controller
             unlink($filePathImage);
             $news->pdfFile()->delete();
             $news->image()->delete();
-            $news->delete();
-            
+            $news->delete();     
             return response()->json([ 'message' => 'Remove success'], Response::HTTP_OK);
         } catch (ModelNotFoundException $e) {
             return response()->json([
@@ -128,15 +123,12 @@ class GuestController extends Controller
         // Retrieve all news articles and map them to a new format
         $sort_by = ['colum' => 'id', 'order' => 'ASC'];
         $page_size = 10;
-
         if(!empty($request->sort_by)){
           $sort_by = $request->sort_by;
         }
-
         if(!empty($request->page_size)){
             $page_size = $request->page_size;
         }
-
         $newsList = DB::table("news")
             ->orderBy($sort_by['colum'],$sort_by['order'])
             ->join("images", "news.id", "=", "images.news_id")
@@ -162,11 +154,9 @@ class GuestController extends Controller
         try {
             $news = News::findOrFail($request->id);
             $filePath = storage_path('app/public/' . $news->pdfFile->file_path);
-
             if (!$news->pdfFile || !file_exists(storage_path('app/' . str_replace('storage/', 'public/', $news->pdfFile->file_path)))) {
                 return response()->json(['error' => 'File not found.'], 404);
             }
-
             return response()->json([
                 'id' => $news->id,
                 'title' => $news->title,
