@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Laravel\Facades\Image;
 //use Spatie\Image\Image;
+use Illuminate\Support\Facades\Http;
 use mikehaertl\pdftk\Pdf;
 
 class GuestController extends Controller
@@ -222,5 +223,21 @@ class GuestController extends Controller
         $question = Question::create([
             'question'=> $request->title, 'answers' => $asList
         ]);
-    }   
+    }
+
+    public function verifyCaptcha(Request $request){
+        $token = $request->token;
+        $response = Http::withUrlParameters([
+            'SITE_SECRET' => env("CAPTCHA_SECRET_KEY"),
+            'captchaValue' =>  $token,
+        ])->post('https://www.google.com/recaptcha/api/siteverify?secret={SITE_SECRET}&response={captchaValue}');
+
+        if ($response->successful()) {
+            $data = $response->json();
+        } else {
+            Log::error("Error al hacer la solicitud HTTP: " . $response);
+            throw new Exception("Error al obtener los datos: " . $response->status());
+        }
+        return response()->json($data, Response::HTTP_OK);
+    }
 }

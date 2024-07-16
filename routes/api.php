@@ -59,3 +59,5 @@ Route::prefix('resources')->group(function () {
     Route::post('post-new-question',[GuestController::class, 'uploadQuestions']);
     Route::post('update-news',[GuestController::class, 'editNews']);
 });
+
+Route::post('captcha',[GuestController::class,'verifyCaptcha']);

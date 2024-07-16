@@ -105,15 +105,13 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
             'email' => $request->email,
         ];
-
-        // Begin a database transaction
         DB::beginTransaction();
         try {
             // Create a new user
             $user = User::create($data);
             $ae = AeController::register_ae($request);
             event(new Registered($user));
-            // Commit the database transaction
+            // Commit
             DB::commit();
             $token = $user->createToken('token-name')->plainTextToken;
 
