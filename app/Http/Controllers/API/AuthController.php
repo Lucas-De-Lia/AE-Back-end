@@ -92,8 +92,6 @@ class AuthController extends Controller
             'province' => 'required|string|max:200',
             'phone' => 'required|string|max:200',
             'startdate' => 'required|date',
-            'occupation' => 'nullable|string|max:4', // Consider providing more specific validation
-            'study' => 'nullable|string|max:4',  // Consider providing more specific validation
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
             'renewvaldate' => 'nullable|date',
