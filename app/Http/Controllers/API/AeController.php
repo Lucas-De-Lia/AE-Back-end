@@ -25,9 +25,8 @@ class AeController extends Controller
         $this->middleware(['throttle:api', 'auth:sanctum', 'api']);
         $this->middleware(['auth:sanctum'], ['except' => ['register_ae']]);
     }
-
-    public function get_calendar_dates()
-    {
+    // Obtiene las fechas de AE para el usuario 
+    public function get_calendar_dates(){
         // Retrieve API URL and token from environment variables
         if (Auth::check()) {
             $url = env("API_URL_AE");
@@ -85,9 +84,8 @@ class AeController extends Controller
             return response()->json($response, Response::HTTP_OK);
         }
     }
-
-    public function finalize_ae(Request $request)
-    {
+    // Gestiona la baja de la AE para el usuario
+    public function finalize_ae(Request $request){
         if (Auth::check()) {
 
             $url = env("API_URL_AE");
@@ -123,14 +121,13 @@ class AeController extends Controller
         }
     }
 
-    private static function getDNI($cuil)
-    {
+    private static function getDNI($cuil){
         preg_match('/-(\d+)-/', $cuil, $matches);
         return (int) ($matches[1]);
         ;
     }
-    public static function start($postData)
-    {
+    // Función encargada de hacer la request de alta de AE
+    public static function start($postData){
         try {
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");
@@ -145,9 +142,8 @@ class AeController extends Controller
             return response()->json('Error al registrar AE', 500);
         }
     }
-
-    public static function merge_dni_photos($image_list)
-    {
+    // Une las imagenes de los dni en una.
+    public static function merge_dni_photos($image_list){
         $manager = ImageManager::gd();
         $resized = [];
         foreach ($image_list as $photo) {
@@ -160,8 +156,7 @@ class AeController extends Controller
         $img_merged->place($resized[1], 'bottom-left');
         return $img_merged->toWebp();
     }
-
-
+    // Gestiona el registro del usuario como un nuevo AE
     public static function register_ae(Request $request)
     {
         $image = AeController::merge_dni_photos([$request->dni1, $request->dni2]);
@@ -200,10 +195,8 @@ class AeController extends Controller
 
         return ['1' => $response->body(), '2' => $response2->body()];
     }
-
-
-    public function start_ae_n(Request $request)
-    {
+    // Gestiona el alta de un usuario ya AE almenos 1 vez para una nueva AE 
+    public function start_ae_n(Request $request){
         $request->validate([
             'firstname' => 'required|string|max:150',
             'lastname' => 'required|string|max:100',
@@ -276,10 +269,8 @@ class AeController extends Controller
             return $response;
         }
     }
-
-
-    public function fetch_user_data(Request $request)
-    {
+    // Obtiene de la API de AE los datos del usuario
+    public function fetch_user_data(Request $request){
         if (Auth::check()) {
             $user = Auth::user();
             $url = env("API_URL_AE");
@@ -324,9 +315,8 @@ class AeController extends Controller
             );
         }
     }
-
-    public function fetch_end_pdf(Request $request)
-    {
+    // Obtiene de la API el  certificado en pdf de fin de AE.
+    public function fetch_end_pdf(Request $request){
         if (Auth::check()) {
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");
@@ -344,7 +334,7 @@ class AeController extends Controller
         }
 
     }
-
+    // Obtiene de la API el certificado en pdf de inicio de AE
     public function fetch_start_pdf(Request $request)
     {
         if (Auth::check()) {

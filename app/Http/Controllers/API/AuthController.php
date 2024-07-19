@@ -29,7 +29,7 @@ class AuthController extends Controller
         // Apply 'auth:sanctum' middleware to all methods except the specified ones.
         $this->middleware(['auth:sanctum'], ['except' => ['login', 'register', 'verify_link_email', 'forgot_password', 'reset_password', 'merge_dni_photos']]);
     }
-
+    // Gestiona el inició de seccion
     public function login(Request $request)
     {
         $request->validate([
@@ -82,7 +82,7 @@ class AuthController extends Controller
             'firstname' => 'required|string|max:150',
             'lastname' => 'required|string|max:100',
             'birthdate' => 'required|date',
-            'gender' => 'required', // Consider providing more specific validation
+            'gender' => 'required',
             'address' => 'required|string|max:100',
             'address_number' => 'required|integer',
             'floor' => 'nullable|string|max:5',
