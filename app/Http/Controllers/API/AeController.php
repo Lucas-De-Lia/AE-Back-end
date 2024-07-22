@@ -335,8 +335,7 @@ class AeController extends Controller
 
     }
     // Obtiene de la API el certificado en pdf de inicio de AE
-    public function fetch_start_pdf(Request $request)
-    {
+    public function fetch_start_pdf(Request $request){
         if (Auth::check()) {
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");

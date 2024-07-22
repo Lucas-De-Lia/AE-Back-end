@@ -25,8 +25,9 @@ class EmailVerifyController extends Controller
         $this->middleware('auth:sanctum', ['except' => ['email_send_by_root']]);
 
     }
-    public function email_verify(EmailVerificationRequest $request)
-    {
+
+    // Verifica el email del usuario logeado
+    public function email_verify(EmailVerificationRequest $request){
         try {
             DB::beginTransaction();
             if ($request->user()->hasVerifiedEmail()) {
@@ -37,6 +38,7 @@ class EmailVerifyController extends Controller
             $request->fulfill();
             $request->user()->markEmailAsVerified();
             $request->user()->save();
+            // El evento es muy importante
             event(new Verified($request->user()));
             DB::commit();
             return response()->json([
@@ -49,9 +51,8 @@ class EmailVerifyController extends Controller
         }
 
     }
-
-    public function email_send(Request $request)
-    {
+    // Envia los emails de verificación de email
+    public function email_send(Request $request){
         $user = $request->user();
         if ($request->user()->hasVerifiedEmail()) {
             return response()->json(['message' =>'User already have verified email'], Response::HTTP_BAD_REQUEST);
@@ -59,15 +60,15 @@ class EmailVerifyController extends Controller
         $user->sendEmailVerificationNotification();
         return response()->json(['message' => 'Verification send'], Response::HTTP_OK);
     }
-
-    public function email_change(Request $request)
-    {
+    // gestiona el cambio de email con un email nuevo y su password, envia un email.
+    public function email_change(Request $request){
         $request->validate([
             'email' => 'required|email|unique:users,email',
             'current_password' => 'required'
         ]);
         $user = $request->user();
         if (!Hash::check($request->input('current_password'), $user->password)) {
+            // Si la contraseña es erronea
             return response()->json(['error' => 'Current password is incorrect'], Response::HTTP_BAD_REQUEST);
         }
         if ($user->email != $request->input('email')) {
@@ -77,7 +78,7 @@ class EmailVerifyController extends Controller
         }
         return response()->json(['message' => 'Verification send successfully'], Response::HTTP_OK);
     }
-
+    // Envia el email de verificación, solo gestionado por el root
     public function email_send_by_root(Request $request)
     {
         $request->validate([

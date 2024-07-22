@@ -22,46 +22,46 @@ class PasswordsController extends Controller
         $this->middleware(['auth:sanctum'], ['except' => ['forgot_password', 'forgot_password']]);
 
     }
-    public function forgot_password(Request $request)
-    {
+    // Intenta recuperar la contraseña enviando un mail de verificación en caso de tener el mail verificado
+    public function forgot_password(Request $request){
         $request->validate(['cuil' => 'exists:users,cuil']);
+        // Busca el usuario con el cuil
         $user = User::whereCuil($request->cuil)->first();
         if (!$user->hasVerifiedEmail()) {
+            // Si no tiene el correo verificado devuelvo error ya que no se si el mail de recuperación llegara
             return response()->json(['email' => __('Error')], Response::HTTP_BAD_REQUEST);
         }
         if ($user) {
+            // Envio el mail con el link
             $status = Password::sendResetLink($user->only('email'));
             Log::info($status);
+            // devuelvo el estado de la operación
             return $status == Password::RESET_LINK_SENT
                 ? response()->json(['status' => __($status)], Response::HTTP_OK)
                 : response()->json(['status' => __($status)], Response::HTTP_BAD_REQUEST);
         }
-
-
     }
 
-    public function reset_password(Request $request)
-    {
+    //gestiona el cambio de password
+    public function reset_password(Request $request){
         $request->validate([
             'token' => 'required',
             'cuil' => 'required',
             'password' => 'required|min:8|confirmed',
         ]);
-
+        // resetea la clave 
         $status = Password::reset(
             $request->only('cuil', 'password', 'password_confirmation', 'token'),
             function (User $user, string $password) {
                 $user->forceFill([
-                    'password' => Hash::make($password)
+                    'password' => Hash::make($password) // hashea la nueva pass 
                 ]);
                 //->setRememberToken(Str::random(100));
-    
                 $user->save();
-
-                event(new PasswordReset($user));
+                event(new PasswordReset($user)); // trigger del evento
             }
         );
-
+        // devuelve el estado de la operación
         return $status === Password::PASSWORD_RESET
             ? response()->json(['status' => __($status)], Response::HTTP_OK)
             : response()->json(['email' => [__($status)]], Response::HTTP_BAD_REQUEST);
@@ -74,7 +74,6 @@ class PasswordsController extends Controller
             'current_password' => 'required',
             'new_password' => 'required|min:8|different:current_password|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).+$/',
         ]);
-
         $user = Auth::user();
         if (!Hash::check($request->input('current_password'), $user->password)) {
             return response()->json(['error' => 'Current password is incorrect'], Response::HTTP_BAD_REQUEST);

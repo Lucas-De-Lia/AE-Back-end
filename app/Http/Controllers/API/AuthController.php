@@ -11,66 +11,47 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Auth\Events\Registered;
 
-class AuthController extends Controller
-{
-    /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        // Rate limit the number of requests from any user to prevent server overload, with a maximum of 100 requests per minute.
-        $this->middleware('throttle:api');
-
-        // Apply 'verified' middleware to all methods except the specified ones.
+class AuthController extends Controller {
+    public function __construct(){
+        $this->middleware('throttle:api'); // Limita las request a 1000 por seg
+        // Funciones a las cuales no es necesario estar verificado para realizar.
         $this->middleware(['verified'], ['except' => ['login', 'refresh', 'logout', 'register', 'email_send_code', 'forgot_password', 'verify_code_email', 'verify_link_email', 'merge_dni_photos']]);
-
-        // Apply 'auth:sanctum' middleware to all methods except the specified ones.
+        // Funciones a las cuales no se debe estar logeado para realizar
         $this->middleware(['auth:sanctum'], ['except' => ['login', 'register', 'verify_link_email', 'forgot_password', 'reset_password', 'merge_dni_photos']]);
     }
     // Gestiona el inició de seccion
-    public function login(Request $request)
-    {
+    public function login(Request $request){
         $request->validate([
             'cuil' => 'required|string',
             'password' => 'required|string'
         ]);
 
         if (Auth::attempt($request->only(['cuil', 'password']))) {
-            $user = $request->user();
-            $user->tokens()->delete();
+            $user = $request->user(); // Obtengo el usuario
+            $user->tokens()->delete(); // botto el token viejo
             $token = $user->createToken('token-name')->plainTextToken;
-
             return response()->json([
-                'user' => [
+                'user' => [ // devuelvo datos del usuario
                     'name' => $user->name,
                     'email' => $user->email,
                     'email_verified_at' => $user->email_verified_at,
                     'cuil' => $user->cuil,
                     'ae' => AeController::$AE['NON_AE']
                 ],
-                'authorization' => [
+                'authorization' => [ // devuelvo datos de auth
                     'token' => $token,
                     'type' => 'Bearer ',
                     'X_CSRF_TOKEN' => csrf_token()
                 ]
             ], Response::HTTP_CREATED);
         }
-
         return response()->json([
             'message' => 'Invalid credentials',
         ], Response::HTTP_UNAUTHORIZED);
     }
 
-    /**
-     * Register a new user
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function register(Request $request)
-    {
+    // Registra un nuevo usuario    
+    public function register(Request $request){
         // Validate the incoming request data
         $request->validate([
             'cuil' => [
@@ -109,14 +90,16 @@ class AuthController extends Controller
         try {
             // Create a new user
             $user = User::create($data);
+            // Envia una requeset de regisro
             $ae = AeController::register_ae($request);
             event(new Registered($user));
             // Commit
             DB::commit();
+            //crea el token
             $token = $user->createToken('token-name')->plainTextToken;
 
             // Return a JSON response
-            return response()->json([
+            return response()->json([ //devuelvo resutlado
                 'message' => 'User created successfully',
                 'authorization' => [
                     'token' => $token,
@@ -131,13 +114,11 @@ class AuthController extends Controller
         }
     }
 
-
-
-    public function logout(Request $request)
-    {
+    // Gestiona el fin de la sección
+    public function logout(Request $request){
+        // verifica si esta auth
         if (Auth::check()) {
             Auth::user()->tokens()->delete();
-
             return response()->json([
                 'message' => 'Successfully logged out',
             ], Response::HTTP_OK);
@@ -147,13 +128,11 @@ class AuthController extends Controller
         ], Response::HTTP_UNAUTHORIZED);
     }
 
-
-    public function refresh()
-    {
+    // Gestiona el mantener la sección abierta
+    public function refresh(){
         // Sin uso actualmente
         if (Auth::check()) {
             $user = Auth::user();
-
             return response()->json([
                 'user' => [
                     'name' => $user->name,
@@ -169,15 +148,12 @@ class AuthController extends Controller
         ], Response::HTTP_UNAUTHORIZED);
     }
 
-    static private function str_random($length = 10)
-    {
+    static private function str_random($length = 10){
         $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         $randomString = '';
-
         for ($i = 0; $i < $length; $i++) {
             $randomString .= $characters[rand(0, strlen($characters) - 1)];
         }
-
         return $randomString;
     }
 }
