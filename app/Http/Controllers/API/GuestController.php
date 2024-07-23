@@ -133,18 +133,28 @@ class GuestController extends Controller
         if(!empty($request->page_size)){
             $page_size = $request->page_size;
         }
+        $reglas = Array();
+        if(!empty($request->title)){
+            $reglas[] = ['LOWER(news.title)', 'LIKE', '%' . strtolower($request->title) . '%'];
+        }
+        if(!empty($request->abstract)){
+            $reglas[] = ['LOWER(news.abstract)', 'LIKE', '%' . strtolower($request->abstract) . '%'];
+        }
+        if(!empty($request->start_date)){
+            $reglas[] = ['news.created_at', '>=', $request->start_date];
+        }
+        if(!empty($request->end_date)){
+            $reglas[] = ['news.created_at', '<=', $request->end_date];
+        }
+
         // Realizo la busqueda
         $newsList = DB::table("news") // De las noticias
             ->orderBy($sort_by['colum'],$sort_by['order']) // con el orden indicado
             ->join("images", "news.id", "=", "images.news_id") // quiero vincularla con su imagen
             ->join("pdf_files", "news.id", "=", "pdf_files.news_id") //quieor vincularla con su pdf
-            ->select('news.*', 'images.url', 'pdf_files.file_path'); 
-        if (!empty($request->title)) { //Busqueda por titulo
-            $newsList->whereRaw("LOWER(news.title) LIKE ?", ['%' . strtolower($request->title) . '%']);
-        }
-        if (!empty($request->abstract)) { //Busqueda por abstract
-            $newsList->whereRaw("LOWER(news.abstract) LIKE ?", ['%' . strtolower($request->abstract) . '%']);
-        }
+            ->select('news.*', 'images.url', 'pdf_files.file_path')
+            ->where($reglas);
+
         return response()->json($newsList->paginate($page_size), Response::HTTP_OK); //pagino y luego retorno el valor.
     }
 
