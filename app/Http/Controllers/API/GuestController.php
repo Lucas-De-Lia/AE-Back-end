@@ -134,19 +134,30 @@ class GuestController extends Controller
             $page_size = $request->page_size;
         }
         $reglas = Array();
-        if(!empty($request->title)){
-            $reglas[] = ['LOWER(news.title)', 'LIKE', '%' . strtolower($request->title) . '%'];
+        $filters = [
+            'title' => 'news.title',
+            'abstract' => 'news.abstract',
+            'start_date' => 'news.created_at',
+            'end_date' => 'news.created_at',
+          ];
+          //echo asi por las dudas si necesito agregar mas tipos de filtros y evitar tanto los if agrupando diferentes tipos de filtros en uno
+        foreach($filters as $key => $column){
+            if (!empty($request->$key)) {
+                switch($key){
+                    case 'title':
+                    case 'abstract':
+                        $searchTerm = strtolower($request->$key);
+                        $reglas[] = [DB::raw("LOWER($column)"), 'LIKE', "%$searchTerm%"];
+                        break;
+                    case 'start_date':
+                        $reglas[] = [$column, '>=', $request->$key];
+                        break;
+                    case 'end_date':
+                        $reglas[] = [$column, '<=', $request->$key];
+                        break;
+                }
+            }
         }
-        if(!empty($request->abstract)){
-            $reglas[] = ['LOWER(news.abstract)', 'LIKE', '%' . strtolower($request->abstract) . '%'];
-        }
-        if(!empty($request->start_date)){
-            $reglas[] = ['news.created_at', '>=', $request->start_date];
-        }
-        if(!empty($request->end_date)){
-            $reglas[] = ['news.created_at', '<=', $request->end_date];
-        }
-
         // Realizo la busqueda
         $newsList = DB::table("news") // De las noticias
             ->orderBy($sort_by['colum'],$sort_by['order']) // con el orden indicado
@@ -154,7 +165,6 @@ class GuestController extends Controller
             ->join("pdf_files", "news.id", "=", "pdf_files.news_id") //quieor vincularla con su pdf
             ->select('news.*', 'images.url', 'pdf_files.file_path')
             ->where($reglas);
-
         return response()->json($newsList->paginate($page_size), Response::HTTP_OK); //pagino y luego retorno el valor.
     }
 
