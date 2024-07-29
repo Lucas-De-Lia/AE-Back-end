@@ -159,7 +159,7 @@ class AeController extends Controller
     // Gestiona el registro del usuario como un nuevo AE
     public static function register_ae(Request $request)
     {
-        $image = AeController::merge_dni_photos([$request->dni1, $request->dni2]);
+        //$image = AeController::merge_dni_photos([$request->dni1, $request->dni2]);
         $nro_dni = AeController::getDNI($request->cuil);
         $postData = [
             'ae_datos' => [
@@ -190,7 +190,7 @@ class AeController extends Controller
             'API-Token' => $token,
             'X-APP-KEY' => env('APP_SISTEMON_KEY'),
         ])
-            ->attach('file', $image, 'dni_' . $nro_dni . '.webp')
+            //->attach('file', $image, 'dni_' . $nro_dni . '.webp')
             ->post($url . '/importacion/archivos', [['name' => 'dni', 'contents' => $nro_dni]]);
 
         return ['1' => $response->body(), '2' => $response2->body()];

@@ -126,7 +126,7 @@ return [
 
     'key' => env('APP_KEY'),
 
-    'cipher' => 'AES-256-CBC',
+    'cipher' => env('APP_CIPHER'),
 
     /*
     |--------------------------------------------------------------------------
@@ -190,5 +190,4 @@ return [
         // 'Example' => App\Facades\Example::class,
         //'Image' => Intervention\Image\Facades\Image::class,
     ])->toArray(),
-
 ];

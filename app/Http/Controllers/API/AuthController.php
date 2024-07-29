@@ -76,8 +76,8 @@ class AuthController extends Controller {
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
             'renewvaldate' => 'nullable|date',
-            'dni1' => 'required|file|max:2048',
-            'dni2' => 'required|file|max:2048',
+            //'dni1' => 'required|file|max:2048',
+            //'dni2' => 'required|file|max:2048',
         ]);
         // Create user data
         $data = [
