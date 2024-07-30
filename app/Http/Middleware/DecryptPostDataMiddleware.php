@@ -37,10 +37,15 @@ class DecryptPostDataMiddleware
     {
         $data = base64_decode($encryptedData);
         $iv = substr($data,0,16);
-        $encryptedDataString = substr($data,16);
+        $hash = substr($data, -32);
+        $encryptedDataString = substr($data,16, strlen($data)- 32 - 16); // no es start y end sino start, length
         $decryptedData = openssl_decrypt($encryptedDataString, $chiper, $key, OPENSSL_RAW_DATA, $iv);
         if($decryptedData === false){
             throw new \Exception('Decryption failed');
+        }
+        $recalculatedHash = hash('sha256', $decryptedData, true);
+        if (!hash_equals($hash, $recalculatedHash)) {
+            throw new Exception('Hash verification failed');
         }
         return $decryptedData;
     }
@@ -49,10 +54,12 @@ class DecryptPostDataMiddleware
     {
         $iv = random_bytes(16);
         $encryptedData = openssl_encrypt($data, $chiper, $key, OPENSSL_RAW_DATA, $iv);
+        $hash = hash('sha256', $data, true);
+
         if ($encryptedData === false){
             throw new \Exception('Encryption failed');
         }
-        return base64_encode($iv . $encryptedData);
+        return base64_encode($iv . $encryptedData. $hash);
     }
 
     public function handle(Request $request, Closure $next): Response
