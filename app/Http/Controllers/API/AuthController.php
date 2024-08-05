@@ -8,6 +8,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Auth\Events\Registered;
 
@@ -76,9 +79,15 @@ class AuthController extends Controller {
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
             'renewvaldate' => 'nullable|date',
-            //'dni1' => 'required|file|max:2048',
-            //'dni2' => 'required|file|max:2048',
+            'dni' => 'required|string',
         ]);
+        //verificar los datos
+        $token = $this->getTokenRENAPER();
+        $datosRenaper = $this->sendImagenDNIRENAPER($request->dni, $token);
+        $check = $this->checkData($request,$datosRenaper);
+        if(!$check->empty()){
+            return response()->json(['error' => $check], 500);
+        }
         // Create user data
         $data = [
             'name' => implode(', ', [$request->firstname, $request->lastname]),
@@ -155,5 +164,69 @@ class AuthController extends Controller {
             $randomString .= $characters[rand(0, strlen($characters) - 1)];
         }
         return $randomString;
+    }
+
+    static private function sendImagenDNIRENAPER($img,$token){
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer' . $token
+        ])->post('https://apirenaper.idear.gov.ar/CHUTROFINAL/servicios/prod/documento.php', [
+            'front' => $img,
+        ]);
+        $data = null;
+        if ($response->successful()) {
+            $data = $response->json();
+        } else {
+            Log::error("Error al hacer la solicitud HTTP: " . $response);
+            throw new Exception("Error al obtener los datos: " . $response->status());
+        }
+        return $data;
+    }
+
+    static private function getTokenRENAPER(){
+        $response = Http::asForm()->post('https://apirenaper.idear.gov.ar/CHUTROFINAL/servicios/prod/Autorizacion/token.php',[
+            'username' => env('RENAPER_USERNAME'),
+            'password'=> env('RENAPER_PASSWORD')
+        ]);
+        if ($response->successful() && $response->codigo == 200  ) {
+            return $response->token;
+        } else {
+            Log::error("Error al hacer la solicitud HTTP: " . $response);
+            throw new Exception("Error al obtener los datos: " . $response->status());
+        }
+    }
+
+    static private function checkData($data , $renaper){
+        // esto se puede hacer mejor con un for y usando keys, tengo ganas? No..
+        $document = $renaper->document;
+        $errors = Array();
+        if(!$document->documentNumber->value == $this->getDNI($data->cuil) && !$this->check($document->documentNumber)){
+            $errors[] = "DNI, no coincide";
+        }
+        if(!$document->Name->value == $data->firstname && !$this->check($document->Name)){
+            $errors[] = "Nombre, no coincide";
+        }
+        if(!$document->Surname->value == $data->lastname && !$this->check($document->Surname)){
+            $errors[] = "Apellido, no coincide";
+        }
+        if(!$document->Sex->value == $data->gender && !$this->check($document->Sex)){
+            $errors[] = "Genero, no coincide";
+        }
+        if(!$document->BirthDate->value ==formatDate($data->birthdate) && !$this->check($document->BirthDate)){
+            $errors[] = "Fecha de nacimiento, no coincide";
+        }
+        return $errors;
+    }
+    private static function getDNI($cuil){
+        preg_match('/-(\d+)-/', $cuil, $matches);
+        return (int) ($matches[1]);
+    }
+
+    private static function formatDate($dateString) {
+        $date = new DateTime($dateString);
+        return $date->format('d/m/Y');
+    }
+
+    private static function check($field){
+        return ( $field->check == 1 ||  $field== -1);
     }
 }
