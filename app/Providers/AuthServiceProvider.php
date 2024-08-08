@@ -36,6 +36,7 @@ class AuthServiceProvider extends ServiceProvider
                 ->line("¡Gracias por confiar en nosotros!")
                 ->line("Para garantizar la seguridad de tu cuenta, necesitamos verificar tu dirección de correo electrónico.")
                 ->line('Para proceder, haz clic en el botón de abajo para verificar tu correo.')
+                ->line('Para verificar tu email correctamente debes ingresar a tu cuenta y verificar el email en el mismo navegador de internet.')
                 ->action('Verificar Email', $newUrl)
                 ->line('Recuerda que este enlace es válido por un tiempo limitado por razones de seguridad.')
                 ->line("Si no has intentado verificar tu dirección de correo electrónico, por favor ignora este correo o contáctanos de inmediato.")

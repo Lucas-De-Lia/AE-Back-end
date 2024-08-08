@@ -20,6 +20,7 @@ class AeController extends Controller
         'FINISHABLE' => 1,
         'NON_FINISHABLE' => 2
     ];
+
     public function __construct()
     {
         $this->middleware(['throttle:api', 'auth:sanctum', 'api']);
@@ -158,7 +159,7 @@ class AeController extends Controller
     }
     // Gestiona el registro del usuario como un nuevo AE
     public static function register_ae(Request $request)
-    {
+    {   
         //$image = AeController::merge_dni_photos([$request->dni1, $request->dni2]);
         $nro_dni = AeController::getDNI($request->cuil);
         $postData = [
@@ -175,25 +176,27 @@ class AeController extends Controller
                 'codigo_postal' => $request->postalcode,
                 'nombre_localidad' => $request->city,
                 'nombre_provincia' => $request->province,
-                'ocupacion' => $request->occupation,
-                'capacitacion' => $request->study,
+                'ocupacion' => 'NC', 
+                'capacitacion' => 'NC',
                 'telefono' => $request->phone,
                 'correo' => $request->email, // ES EL DEL USER
             ],
             'ae_estado' => ['fecha_ae' => $request->startdate],
         ];
+        Log::info($postData);
         $response = AeController::start($postData);
         $url = env("API_URL_AE");
         $token = env("API_TOKEN_AE");
 
+        /*
         $response2 = Http::withHeaders([
             'API-Token' => $token,
             'X-APP-KEY' => env('APP_SISTEMON_KEY'),
         ])
             //->attach('file', $image, 'dni_' . $nro_dni . '.webp')
             ->post($url . '/importacion/archivos', [['name' => 'dni', 'contents' => $nro_dni]]);
-
-        return ['1' => $response->body(), '2' => $response2->body()];
+        */
+        return ['1' => $response->body()];
     }
     // Gestiona el alta de un usuario ya AE almenos 1 vez para una nueva AE 
     public function start_ae_n(Request $request){

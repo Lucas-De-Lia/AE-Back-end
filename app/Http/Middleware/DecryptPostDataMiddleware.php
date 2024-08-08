@@ -70,10 +70,8 @@ class DecryptPostDataMiddleware
             $encryptedData = $request->input('data'); // Ajusta 'data' según el nombre de tu campo POST
             try {
                 // Desencriptar los datos usando AES
-                Log::info($encryptedData);
                 $decryptedData = $this->decrypt($encryptedData, $this->key, $this->chiper);
                 $data = json_decode($decryptedData, true);
-                Log::info($data);
                 $request->merge($data);
             } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
                 // Manejar el error si la desencriptación falla
@@ -81,15 +79,11 @@ class DecryptPostDataMiddleware
                 return response()->json(['error' => 'Error al desencriptar los datos'], 500);
             }
         }
-        Log::info("RESPONSE");
         $response = $next($request);
-        Log::info($response);
         if( $response instanceof \Illuminate\Http\JsonResponse){
             $originalData = $response->getData(true);
-            Log::info($originalData);
             try {
                 $encryptedResponseData = $this->encrypt(json_encode($originalData), $this->key, $this->chiper);
-                Log::info($encryptedResponseData);
                 $response->setData(['data' => $encryptedResponseData]);
             } catch (\Exception $e){
                 Log::error('Error encrypting response data: ' . $e->getMessage());

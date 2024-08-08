@@ -47,7 +47,7 @@ class User extends Authenticatable implements MustVerifyEmail, CanResetPassword
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
+        'password' => 'hashed'
     ];
 
     /**

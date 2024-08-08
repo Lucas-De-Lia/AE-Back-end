@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\Facades\Crypt;
 
 class AuthController extends Controller {
     public function __construct(){
@@ -29,7 +30,7 @@ class AuthController extends Controller {
             'password' => 'required|string'
         ]);
 
-        if (Auth::attempt($request->only(['cuil', 'password']))) {
+        if (Auth::attempt(['cuil' => $request->cuil, 'password' => $request->password])) {
             $user = $request->user(); // Obtengo el usuario
             $user->tokens()->delete(); // botto el token viejo
             $token = $user->createToken('token-name')->plainTextToken;
@@ -82,12 +83,14 @@ class AuthController extends Controller {
             'dni' => 'required|string',
         ]);
         //verificar los datos
-        $token = $this->getTokenRENAPER();
-        $datosRenaper = $this->sendImagenDNIRENAPER($request->dni, $token);
-        $check = $this->checkData($request,$datosRenaper);
-        if(!$check->empty()){
-            return response()->json(['error' => $check], 500);
-        }
+        
+        // $token = $this->getTokenRENAPER();
+        // $datosRenaper = $this->sendImagenDNIRENAPER($request->dni, $token);
+        // $check = $this->checkData($request,$datosRenaper);
+        // if(!$check->empty()){
+        //    return response()->json(['error' => $check], 500);
+        // }
+
         // Create user data
         $data = [
             'name' => implode(', ', [$request->firstname, $request->lastname]),
@@ -216,6 +219,7 @@ class AuthController extends Controller {
         }
         return $errors;
     }
+
     private static function getDNI($cuil){
         preg_match('/-(\d+)-/', $cuil, $matches);
         return (int) ($matches[1]);
