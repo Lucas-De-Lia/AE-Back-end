@@ -22,7 +22,7 @@ class EmailVerifyController extends Controller
         $this->middleware(['throttle:api'], ['except' => ["email_send_by_root"]]);
         // Apply 'verified' middleware to all methods except the specified ones.
         $this->middleware(['verified'], ['except' => ['email_verify', 'email_send','email_send_by_root']]);
-        $this->middleware('auth:sanctum', ['except' => ['email_send_by_root','email_verify']]);
+        $this->middleware('auth:sanctum', ['except' => ['email_send_by_root']]);
 
     }
 

@@ -20,7 +20,6 @@ class AeController extends Controller
         'FINISHABLE' => 1,
         'NON_FINISHABLE' => 2
     ];
-
     public function __construct()
     {
         $this->middleware(['throttle:api', 'auth:sanctum', 'api']);
@@ -121,7 +120,6 @@ class AeController extends Controller
             }
         }
     }
-
     private static function getDNI($cuil){
         preg_match('/-(\d+)-/', $cuil, $matches);
         return (int) ($matches[1]);
@@ -158,8 +156,7 @@ class AeController extends Controller
         return $img_merged->toWebp();
     }
     // Gestiona el registro del usuario como un nuevo AE
-    public static function register_ae(Request $request)
-    {   
+    public static function register_ae(Request $request){   
         //$image = AeController::merge_dni_photos([$request->dni1, $request->dni2]);
         $nro_dni = AeController::getDNI($request->cuil);
         $postData = [
@@ -354,5 +351,41 @@ class AeController extends Controller
             return response()->json(["content" => $content]);
         }
 
+    }
+    //
+    public function fetch_history(Request $request){
+        if (Auth::check()) {
+            $user = Auth::user();
+            $url = env("API_URL_AE");
+            $token = env("API_TOKEN_AE");
+            $dni = AeController::getDNI($user->cuil);
+
+            $page_size = 10;
+            //Si envie datos concretos de paginado los seteo
+            if(!empty($request->page_size)){
+                $page_size = $request->page_size;
+            }
+
+            try {
+                $response = Http::withHeaders([
+                    'API-Token' => $token,
+                    'Content-Type' => 'application/json',
+                    'X-API-Key' => env('APP_SISTEMON_KEY'),
+                ])->post($url . '/historial/' . $dni . '?page=' . $request->query('page'), [
+                    'page_size' => $page_size,
+                ]);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+                } else {
+                    Log::error("Error al hacer la solicitud HTTP: " . $response);
+                    throw new Exception("Error al obtener los datos: " . $response->status());
+                }
+            } catch (Exception $e) {
+                Log::error("Error al hacer la solicitud HTTP: " . $e->getMessage());
+                return response()->json(['error' => 'Ha ocurrido un error al obtener los datos.'], 500);
+            }
+            return response()->json($data);
+        }
     }
 }
