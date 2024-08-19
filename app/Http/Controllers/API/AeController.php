@@ -134,9 +134,7 @@ class AeController extends Controller
                 'API-Token' => $token,
                 'X-API-Key' => env('APP_SISTEMON_KEY'),
             ])->post($url . '/agregar', $postData);
-            
             return $response;
-
         } catch (Exception $e) {
             return response()->json('Error al registrar AE', 500);
         }
@@ -180,7 +178,6 @@ class AeController extends Controller
             ],
             'ae_estado' => ['fecha_ae' => $request->startdate],
         ];
-        Log::info($postData);
         $response = AeController::start($postData);
         $url = env("API_URL_AE");
         $token = env("API_TOKEN_AE");
@@ -211,12 +208,7 @@ class AeController extends Controller
             'state' => 'required|string|max:200',
             'phone' => 'required|string|max:200',
             'startdate' => 'required|date',
-            'occupation' => 'nullable|string|max:4', // VER COMO HACERLO
-            'study' => 'nullable|string|max:4',
-            'dni1' => 'file|max:2048',
-            'dni2' => 'file|max:2048',
         ]);
-
         if (Auth::check()) {
 
             $user = Auth::user();
@@ -258,15 +250,15 @@ class AeController extends Controller
                     'codigo_postal' => $request->postalcode,
                     'nombre_localidad' => $request->city,
                     'nombre_provincia' => $request->state,
-                    'ocupacion' => $request->occupation,
-                    'capacitacion' => $request->study,
+                    'ocupacion' => 'NC', 
+                    'capacitacion' => 'NC',
                     'telefono' => $request->phone,
                     'correo' => $user->email, // ES EL DEL USER
                 ],
                 'ae_estado' => ['fecha_ae' => $request->startdate],
             ];
             $response = AeController::start($postData);
-            return $response;
+            return response()->json(["content" => $response->json()]);
         }
     }
     // Obtiene de la API de AE los datos del usuario
@@ -389,3 +381,4 @@ class AeController extends Controller
         }
     }
 }
+//somos.casino

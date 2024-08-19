@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Exception;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Crypt;
@@ -43,7 +44,7 @@ class DecryptPostDataMiddleware
         if($decryptedData === false){
             throw new \Exception('Decryption failed');
         }
-        $recalculatedHash = hash('sha256', $decryptedData, true);
+        $recalculatedHash = hash('sha256', $decryptedData, true);    
         if (!hash_equals($hash, $recalculatedHash)) {
             throw new Exception('Hash verification failed');
         }
@@ -67,10 +68,11 @@ class DecryptPostDataMiddleware
         // Verificar si la solicitud es un POST
         if ($request->isMethod('post') && $request->has('data')) {
             // Obtener el dato encriptado desde la solicitud
-            $encryptedData = $request->input('data'); // Ajusta 'data' según el nombre de tu campo POST
+            $encryptedData = $request->input('data');
             try {
                 // Desencriptar los datos usando AES
                 $decryptedData = $this->decrypt($encryptedData, $this->key, $this->chiper);
+
                 $data = json_decode($decryptedData, true);
                 $request->merge($data);
             } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
@@ -87,7 +89,7 @@ class DecryptPostDataMiddleware
                 $response->setData(['data' => $encryptedResponseData]);
             } catch (\Exception $e){
                 Log::error('Error encrypting response data: ' . $e->getMessage());
-                return response()->json(['error' => 'Error encrypting response']);
+                return response()->json(['error' => 'Error encrypting response'], 500);
             }
         }
         return $response;
