@@ -140,22 +140,15 @@ class AeController extends Controller
         }
     }
     // Une las imagenes de los dni en una.
-    public static function merge_dni_photos($image_list){
+    public static function merge_dni_photos($photo){
         $manager = ImageManager::gd();
-        $resized = [];
-        foreach ($image_list as $photo) {
-            $resized[] = $manager->read($photo)->resize(1280, 720, function ($constraint) {
-                $constraint->aspectRatio();
-            });
-        }
-        $img_merged = $manager->create(1280, 1440);
-        $img_merged->place($resized[0], 'top-left');
-        $img_merged->place($resized[1], 'bottom-left');
-        return $img_merged->toWebp();
+        $resized = $manager->read($photo)->resize(1280, 720, function ($constraint) {
+            $constraint->aspectRatio();
+        });
+        return $resized->toWebp();
     }
     // Gestiona el registro del usuario como un nuevo AE
     public static function register_ae(Request $request){   
-        //$image = AeController::merge_dni_photos([$request->dni1, $request->dni2]);
         $nro_dni = AeController::getDNI($request->cuil);
         $postData = [
             'ae_datos' => [
@@ -181,16 +174,15 @@ class AeController extends Controller
         $response = AeController::start($postData);
         $url = env("API_URL_AE");
         $token = env("API_TOKEN_AE");
-
-        /*
+        $image = AeController::merge_dni_photos($request->dni);
+        
         $response2 = Http::withHeaders([
             'API-Token' => $token,
-            'X-APP-KEY' => env('APP_SISTEMON_KEY'),
-        ])
-            //->attach('file', $image, 'dni_' . $nro_dni . '.webp')
+            ])
+            ->attach('file', $image, 'dni_' . $nro_dni . '.webp')
             ->post($url . '/importacion/archivos', [['name' => 'dni', 'contents' => $nro_dni]]);
-        */
-        return ['1' => $response->body()];
+
+        return ['1' => $response->body() , '2' => $response2->body()];
     }
     // Gestiona el alta de un usuario ya AE almenos 1 vez para una nueva AE 
     public function start_ae_n(Request $request){

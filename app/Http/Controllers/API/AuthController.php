@@ -104,6 +104,7 @@ class AuthController extends Controller {
             $user = User::create($data);
             // Envia una requeset de regisro
             $ae = AeController::register_ae($request);
+            Log::info($ae);
             event(new Registered($user));
             // Commit
             DB::commit();
