@@ -19,7 +19,7 @@ class PasswordsController extends Controller
     {
         // Rate limit the number of requests from any user to prevent server overload, with a maximum of 100 requests per minute.
         $this->middleware(['throttle:api']);
-        $this->middleware(['auth:sanctum'], ['except' => ['forgot_password', 'forgot_password']]);
+        $this->middleware(['auth:sanctum'], ['except' => ['forgot_password', 'reset_password']]);
 
     }
     // Intenta recuperar la contraseña enviando un mail de verificación en caso de tener el mail verificado
@@ -72,7 +72,7 @@ class PasswordsController extends Controller
     {
         $request->validate([
             'current_password' => 'required',
-            'new_password' => 'required|min:8|different:current_password|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).+$/',
+            'new_password' => 'required|min:8|different:current_password|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/',
         ]);
         $user = Auth::user();
         if (!Hash::check($request->input('current_password'), $user->password)) {
