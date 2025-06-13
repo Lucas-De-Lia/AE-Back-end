@@ -235,3 +235,6 @@ class AuthController extends Controller {
         return ( $field->check == 1 ||  $field== -1);
     }
 }
+
+//TODO Borras todos los metodos de RENAPER crear un metodo para usar OCR  y verificar DNI
+//? Analizar con javi que conviene si tratar de obtener ciertos campos o validar solo que la imagen no sea borrosa 

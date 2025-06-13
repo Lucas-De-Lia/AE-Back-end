@@ -20,6 +20,7 @@
         "symfony/http-client": "^7.0",
         "symfony/mailgun-mailer": "^7.0",
         "tecnickcom/tc-lib-pdf": "^8.0",
+        "thiagoalessio/tesseract_ocr": "^2.13",
         "web-token/jwt-framework": "^3.4"
     },
     "require-dev": {
