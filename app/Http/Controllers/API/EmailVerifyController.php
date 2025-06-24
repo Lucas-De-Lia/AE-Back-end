@@ -72,9 +72,12 @@ class EmailVerifyController extends Controller
             return response()->json(['error' => 'Current password is incorrect'], Response::HTTP_BAD_REQUEST);
         }
         if ($user->email != $request->input('email')) {
+            //TODO: MODIFICAR, PARA QUE SE ENVIE UN MAIL DE CONFIRMACION DE CAMBIO Y QUE SOLO SI SE VERIFICA ESE EMAIL SE PRODUCE EL CAMBIO
             $user->forceFill(["email" => $request->input('email'), 'email_verified_at' => null]);
             $user->save();
             $user->sendEmailVerificationNotification();
+        }else{
+            return response()->json(['message' => 'Can not use your currect email '],Response::HTTP_BAD_REQUEST);
         }
         return response()->json(['message' => 'Verification send successfully'], Response::HTTP_OK);
     }
