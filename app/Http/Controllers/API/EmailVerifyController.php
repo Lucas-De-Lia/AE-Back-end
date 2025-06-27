@@ -73,6 +73,9 @@ class EmailVerifyController extends Controller
         }
         if ($user->email != $request->input('email')) {
             //TODO: MODIFICAR, PARA QUE SE ENVIE UN MAIL DE CONFIRMACION DE CAMBIO Y QUE SOLO SI SE VERIFICA ESE EMAIL SE PRODUCE EL CAMBIO
+            //? aca creo que solo deberia enviar el mail de notificacion, pero con una funcion distinta
+            //? porque esta usa el email actual del user, la mia deberia recibir como parametro el email y hacer los cambios luego de la validación
+            //? en el front end deberia agregar una nueva ruta o ver si la actual me funciona
             $user->forceFill(["email" => $request->input('email'), 'email_verified_at' => null]);
             $user->save();
             $user->sendEmailVerificationNotification();
