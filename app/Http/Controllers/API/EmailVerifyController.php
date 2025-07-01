@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Mail\EmailChangeVerification;
+use App\Mail\VerifyNewEmail;
 use App\Models\EmailToVerify;
+use App\Models\PendingEmailChange;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Auth\Events\Verified;
@@ -13,6 +17,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class EmailVerifyController extends Controller
 {
@@ -21,7 +26,7 @@ class EmailVerifyController extends Controller
         // Rate limit the number of requests from any user to prevent server overload, with a maximum of 100 requests per minute.
         $this->middleware(['throttle:api'], ['except' => ["email_send_by_root"]]);
         // Apply 'verified' middleware to all methods except the specified ones.
-        $this->middleware(['verified'], ['except' => ['email_verify', 'email_send','email_send_by_root']]);
+        $this->middleware(['verified'], ['except' => ['email_verify', 'email_send','email_send_by_root','email_change','confirmEmailChange']]);
         $this->middleware('auth:sanctum', ['except' => ['email_send_by_root']]);
 
     }
@@ -33,7 +38,7 @@ class EmailVerifyController extends Controller
             if ($request->user()->hasVerifiedEmail()) {
                 return response()->json([
                     'message' => 'Email already Verified'
-                ]);
+                ], Response::HTTP_BAD_REQUEST);
             }
             $request->fulfill();
             $request->user()->markEmailAsVerified();
@@ -47,7 +52,7 @@ class EmailVerifyController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => $e->getMessage()
-            ]);
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
     }
@@ -67,23 +72,52 @@ class EmailVerifyController extends Controller
             'current_password' => 'required'
         ]);
         $user = $request->user();
+        $newEmail = $request->input('email');
         if (!Hash::check($request->input('current_password'), $user->password)) {
             // Si la contraseña es erronea
             return response()->json(['error' => 'Current password is incorrect'], Response::HTTP_BAD_REQUEST);
         }
-        if ($user->email != $request->input('email')) {
+        if ($user->email != $newEmail) {
             //TODO: MODIFICAR, PARA QUE SE ENVIE UN MAIL DE CONFIRMACION DE CAMBIO Y QUE SOLO SI SE VERIFICA ESE EMAIL SE PRODUCE EL CAMBIO
-            //? aca creo que solo deberia enviar el mail de notificacion, pero con una funcion distinta
-            //? porque esta usa el email actual del user, la mia deberia recibir como parametro el email y hacer los cambios luego de la validación
-            //? en el front end deberia agregar una nueva ruta o ver si la actual me funciona
-            $user->forceFill(["email" => $request->input('email'), 'email_verified_at' => null]);
-            $user->save();
-            $user->sendEmailVerificationNotification();
+            
+            if(User::where('email', $newEmail)->exists()){
+                return response()->json(['message' => 'Email already exists'], Response::HTTP_BAD_REQUEST);
+            }
+            PendingEmailChange::where('user_id', $user->id)->delete();
+            $token = Str::uuid()->toString();
+            $tokenHash = hash('sha256', $token);
+            PendingEmailChange::create([
+                'user_id' => $user->id,
+                'new_email' => $newEmail,
+                'token' => $tokenHash,
+                'expires_at' => Carbon::now()->addHour(),
+                ]);
+            Mail::to($newEmail)->send(new VerifyNewEmail($token));
         }else{
             return response()->json(['message' => 'Can not use your currect email '],Response::HTTP_BAD_REQUEST);
         }
         return response()->json(['message' => 'Verification send successfully'], Response::HTTP_OK);
     }
+
+    public function confirmEmailChange(Request $request){
+        $token = $request->input('token');
+        $tokenHash = hash('sha256', $token);
+        $pending = PendingEmailChange::where('token', $tokenHash)->where('expires_at','>',now())->first();
+        if(!$pending){
+            return response()->json(['message'=> 'Invalid or expired token'], Response::HTTP_BAD_REQUEST);
+        }
+        $user = User::find($pending->user_id);
+        if(!$user){
+            return response()->json(['message'=> 'User not found'], Response::HTTP_BAD_REQUEST);
+        }
+        $user->email = $pending->new_email;
+        $user->markEmailAsVerified();
+        $user->save();
+        $pending->delete();
+        return response()->json(['message'=> 'Email changed successfully'],Response::HTTP_OK);
+    }
+
+
     // Envia el email de verificación, solo gestionado por el root
     public function email_send_by_root(Request $request)
     {

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('new_email')->unique();
-            $table->string('token')->unique();
+            $table->string('token', 64)->unique();
             $table->timestamp('expires_at');
             $table->timestamps();
         });
@@ -27,6 +27,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        Schema::table('pending_email_changes', function (Blueprint $table) {
+            $table->string('token')->change(); // Asumimos que antes no tenía longitud fija
+        });
     }
 };

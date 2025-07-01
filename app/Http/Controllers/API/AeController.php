@@ -180,7 +180,7 @@ class AeController extends Controller
             'API-Token' => $token,
             ])
             ->attach('file', $image, 'dni_' . $nro_dni . '.webp')
-            ->post($url . '/importacion/archivos', [['name' => 'dni', 'contents' => $nro_dni]]);
+            ->post("{$url}" . '/importacion/archivos', [['name' => 'dni', 'contents' => $nro_dni]]);
 
         return ['1' => $response->body() , '2' => $response2->body()];
     }

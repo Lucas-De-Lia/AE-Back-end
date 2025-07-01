@@ -37,6 +37,7 @@ Route::prefix('email')->group(function () {
     Route::post('notification', [EmailVerifyController::class, 'email_send'])->name('verification.resend');
     Route::post('change', [EmailVerifyController::class, 'email_change']);
     Route::post("rootNotification", [EmailVerifyController::class, 'email_send_by_root']);
+    Route::post('verifyNewEmail',[EmailVerifyController::class,'confirmEmailChange']);
 });
 
 Route::prefix('ae')->group(function () {
@@ -61,7 +62,3 @@ Route::prefix('resources')->group(function () {
 });
 
 Route::post('captcha',[GuestController::class,'verifyCaptcha']);
-
-//! API DE PRUEBA PARA OCR NO ES DEFINITIVA
-
-Route::post('pruebaOcr',[PruebaOcrController::class,'checkLegibility']);
