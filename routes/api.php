@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\GuestController;
 use App\Http\Controllers\API\EmailVerifyController;
-use App\Http\Controllers\API\PruebaOcrController;
+
 
 Route::prefix('auth')->group(function () {
     Route::post('photos', [AuthController::class, 'merge_dni_photos']);
