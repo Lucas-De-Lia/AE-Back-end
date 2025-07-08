@@ -24,10 +24,10 @@ class EmailVerifyController extends Controller
     public function __construct()
     {
         // Rate limit the number of requests from any user to prevent server overload, with a maximum of 100 requests per minute.
-        $this->middleware(['throttle:api'], ['except' => ["email_send_by_root"]]);
+        $this->middleware(['throttle:api']);
         // Apply 'verified' middleware to all methods except the specified ones.
-        $this->middleware(['verified'], ['except' => ['email_verify', 'email_send','email_send_by_root','email_change','confirmEmailChange']]);
-        $this->middleware('auth:sanctum', ['except' => ['email_send_by_root']]);
+        $this->middleware(['verified'], ['except' => ['email_verify', 'email_send','email_change','confirmEmailChange']]);
+        $this->middleware('auth:sanctum');
 
     }
 
@@ -78,8 +78,6 @@ class EmailVerifyController extends Controller
             return response()->json(['error' => 'Current password is incorrect'], Response::HTTP_BAD_REQUEST);
         }
         if ($user->email != $newEmail) {
-            //TODO: MODIFICAR, PARA QUE SE ENVIE UN MAIL DE CONFIRMACION DE CAMBIO Y QUE SOLO SI SE VERIFICA ESE EMAIL SE PRODUCE EL CAMBIO
-            
             if(User::where('email', $newEmail)->exists()){
                 return response()->json(['message' => 'Email already exists'], Response::HTTP_BAD_REQUEST);
             }
@@ -115,21 +113,5 @@ class EmailVerifyController extends Controller
         $user->save();
         $pending->delete();
         return response()->json(['message'=> 'Email changed successfully'],Response::HTTP_OK);
-    }
-
-
-    // Envia el email de verificación, solo gestionado por el root
-    public function email_send_by_root(Request $request)
-    {
-        $request->validate([
-            'email' => 'required|email|exists:users,email',
-        ]);
-        $email = $request->input('email');
-        $user = User::where('email', $email)->first();
-        if ($user->hasVerifiedEmail()) {
-            return response()->json(['message' =>'User already have verified email'], Response::HTTP_BAD_REQUEST);
-        }
-        $user->sendEmailVerificationNotification();
-        return response()->json(['message' => 'Verification send'], Response::HTTP_OK);
     }
 }

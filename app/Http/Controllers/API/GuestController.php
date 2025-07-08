@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\News;
 use App\Models\Question;
+use App\Models\User;
 use Illuminate\Http\Response;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
@@ -202,7 +203,7 @@ class GuestController extends Controller
             // Obtiene la noticia
             $news = News::findOrFail($request->id);
             if(!$news){
-                responde()->json(['message' => 'News not found'], Response::HTTP_NOT_FOUND);
+                response()->json(['message' => 'News not found'], Response::HTTP_NOT_FOUND);
             }
             //Actualizo los campos si son enviados en la request
             if($request->title){
