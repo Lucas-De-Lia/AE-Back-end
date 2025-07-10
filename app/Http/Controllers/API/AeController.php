@@ -10,7 +10,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
 use Exception;
+use Illuminate\Validation\ValidationException;
 use Intervention\Image\ImageManager;
+use GuzzleHttp\Exception\RequestException;
 
 class AeController extends Controller
 {
@@ -372,5 +374,77 @@ class AeController extends Controller
             return response()->json($data);
         }
     }
+
+public function loadSurvey(Request $request){
+    if (!Auth::check()) {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+
+    try {
+        $request->request->remove('data');
+        // Validación de datos
+        $validatedData = $request->validate([
+            'frecuencia' => 'required|string|in:Diaria,Semanal,Mensual',
+            'asistencia' => 'required|string|in:Solo,Acompaniado',
+            'horas' => 'required|integer|between:1,24',
+            'maquinasTradicionales' => 'required|boolean',
+            'ruletaElectronica' => 'required|boolean',
+            'carteados' => 'required|boolean',
+            'ruletaAmericana' => 'required|boolean',
+            'dados' => 'required|boolean',
+            'bingo' => 'required|boolean',
+            'socioClubJugadores' => 'required|boolean',
+            'conocePlataformasOnline' => 'required|boolean',
+            'utilizaPlataformasOnline' => 'required|boolean',
+            'problemasAutocontrol' => 'required|boolean',
+            'deseaRecibirInfo' => 'required|boolean',
+        ]);
+        
+        // Agregar CUIL al payload
+        $validatedData['cuil'] = Auth::user()->cuil;
+        // Solicitud HTTP
+        $response = Http::withHeaders([
+            'X-API-Key' => env('APP_SISTEMON_KEY'),
+            'API-Token' => env("API_TOKEN_AE"),
+            'Content-Type' => 'application/json',
+        ])->post(env("API_URL_AE") . '/encuesta', $validatedData);
+        // Retornar respuesta del microservicio
+        Log::info('Respuesta microservicio', [
+            'status' => $response->status(),
+            'body' => $response->body(),
+        ]);
+        if ($response->successful()) {
+            return response()->json($response->json());
+        } else {
+        // Manejar error específico
+        return response()->json([
+            'message' => 'Error desde microservicio',
+            'status' => $response->status(),
+            'body' => $response->body(),
+        ], $response->status());
+        }
+    } catch (ValidationException $e) {
+        Log::error($e->getMessage());
+        return response()->json([
+            'message' => 'Errores de validación',
+            'errors' => $e->errors()
+        ], 422);
+
+    } catch (RequestException $e) {
+        Log::error($e->getMessage());
+        return response()->json([
+            'message' => 'Error al comunicarse con el microservicio',
+            'error' => $e
+        ], 500);
+
+    } catch (Exception $e) {
+        Log::error($e->getMessage());
+        return response()->json([
+            'message' => 'Ocurrió un error inesperado',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
 }
 //somos.casino

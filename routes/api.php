@@ -48,6 +48,7 @@ Route::prefix('ae')->group(function () {
     Route::post('start-n', [AeController::class, 'start_ae_n']);
     Route::post('finalize', [AeController::class, 'finalize_ae']);
     Route::post('history', [AeController::class, 'fetch_history']);
+    Route::post('survey',[AeController::class,'loadSurvey']);
 });
 
 Route::prefix('resources')->group(function () {
