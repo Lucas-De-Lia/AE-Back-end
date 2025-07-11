@@ -13,6 +13,7 @@ use Exception;
 use Illuminate\Validation\ValidationException;
 use Intervention\Image\ImageManager;
 use GuzzleHttp\Exception\RequestException;
+use Illuminate\Support\Facades\DB;
 
 class AeController extends Controller
 {
@@ -379,7 +380,6 @@ public function loadSurvey(Request $request){
     if (!Auth::check()) {
         return response()->json(['error' => 'Unauthorized'], 401);
     }
-
     try {
         $request->request->remove('data');
         // Validación de datos
@@ -408,12 +408,11 @@ public function loadSurvey(Request $request){
             'API-Token' => env("API_TOKEN_AE"),
             'Content-Type' => 'application/json',
         ])->post(env("API_URL_AE") . '/encuesta', $validatedData);
-        // Retornar respuesta del microservicio
-        Log::info('Respuesta microservicio', [
-            'status' => $response->status(),
-            'body' => $response->body(),
-        ]);
         if ($response->successful()) {
+            $user = Auth::user();
+            DB::table('users')
+            ->where('id', $user->id)
+            ->update(['respondio_encuesta' => true]);
             return response()->json($response->json());
         } else {
         // Manejar error específico

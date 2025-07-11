@@ -28,6 +28,7 @@ class User extends Authenticatable implements MustVerifyEmail, CanResetPassword
         'cuil',
         'email',
         'password',
+        'respondio_encuesta',
     ];
 
     /**
