@@ -29,7 +29,6 @@ class AuthController extends Controller {
             'cuil' => 'required|string',
             'password' => 'required|string'
         ]);
-        //TODO: CREAR ENDPOINT EN AUDITORIA QUE DEVUELVA SI EL USAR RESPONDIO LA ENCUESTA, ASI LO AGREGO A LOS DATOS DEL USER
         if (Auth::attempt(['cuil' => $request->cuil, 'password' => $request->password])) {
             $user = $request->user(); // Obtengo el usuario
             $user->tokens()->delete(); // botto el token viejo
@@ -42,7 +41,7 @@ class AuthController extends Controller {
                 $response = Http::withHeaders([
                     'API-Token' => $apiToken,
                     'X-API-Key' => env('APP_SISTEMON_KEY'),
-                    ])->get($url . 'respondio-encuesta',[
+                    ])->get("$url/respondio-encuesta",[
                         'cuil' => $user->cuil,
                     ]);
                 
@@ -166,13 +165,31 @@ class AuthController extends Controller {
         // Sin uso actualmente
         if (Auth::check()) {
             $user = Auth::user();
+            $url = env("API_URL_AE");
+            $apiToken = env("API_TOKEN_AE");
+            $respondioEncuesta = true;
+            try{
+                $response = Http::withHeaders([
+                    'API-Token' => $apiToken,
+                    'X-API-Key' => env('APP_SISTEMON_KEY'),
+                    ])->get("$url/respondio-encuesta",[
+                        'cuil' => $user->cuil,
+                    ]);
+                
+                if($response->successful()){
+                    $respondioEncuesta = $response->json('respondioEncuesta');
+                }
+            }catch (Exception $e){
+                Log::error('Error al consultar microservicio de encuesta: ' . $e->getMessage());
+            }
             return response()->json([
                 'user' => [
                     'name' => $user->name,
                     'email' => $user->email,
                     'email_verified_at' => $user->email_verified_at,
                     'cuil' => $user->cuil,
-                    'ae' => AeController::$AE['NON_AE']
+                    'ae' => AeController::$AE['NON_AE'],
+                    'respondioEncuesta' => $respondioEncuesta,
                 ],
             ], Response::HTTP_CREATED);
         }
