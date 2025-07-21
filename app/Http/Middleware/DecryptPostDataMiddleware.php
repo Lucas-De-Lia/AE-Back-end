@@ -82,7 +82,11 @@ class DecryptPostDataMiddleware
             }
         }
         $response = $next($request);
-        if( $response instanceof \Illuminate\Http\JsonResponse){
+        $excludedRoutes = [
+        'api/resources/get-news-pdf', // agregá las que necesites
+    ];
+        if( $response instanceof \Illuminate\Http\JsonResponse &&
+        !in_array($request->path(), $excludedRoutes)){
             $originalData = $response->getData(true);
             try {
                 $encryptedResponseData = $this->encrypt(json_encode($originalData), $this->key, $this->chiper);
