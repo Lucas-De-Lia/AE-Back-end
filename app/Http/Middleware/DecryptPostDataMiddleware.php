@@ -84,6 +84,7 @@ class DecryptPostDataMiddleware
         $response = $next($request);
         $excludedRoutes = [
         'api/resources/get-news-pdf', // agregá las que necesites
+        'api/resources/update-news',
     ];
         if( $response instanceof \Illuminate\Http\JsonResponse &&
         !in_array($request->path(), $excludedRoutes)){

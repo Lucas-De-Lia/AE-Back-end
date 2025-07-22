@@ -46,7 +46,13 @@ class GuestController extends Controller
                 'file_path' => str_replace('public/', 'storage/', $pdf)
             ]);
             DB::commit();
-            return response()->json(['message' => 'PDF uploaded successfully'], Response::HTTP_OK);
+            return response()->json([
+            'id' => $news->id,
+            'title' => $news->title,
+            'abstract' => $news->abstract,
+            'imagen' => str_replace('public/', 'storage/', $imagePath),  // URL accesible desde el navegador
+            'pdf' => str_replace('public/', 'storage/', $pdf),
+        ], 200);
         } catch (\Exception $e) {
             // Roll back the transaction and return an error response
             DB::rollback();
@@ -185,8 +191,8 @@ class GuestController extends Controller
                 'id' => $news->id,
                 'title' => $news->title,
                 'abstract' => $news->abstract,
-                'imagen' => $news->image->url,
-                'pdf' => $news->pdfFile->file_path,
+                'imagen' => asset($news->image->url),
+                'pdf' => asset($news->pdfFile->file_path),
             ], Response::HTTP_OK);
         } catch (ModelNotFoundException $e) {
             return response()->json([
