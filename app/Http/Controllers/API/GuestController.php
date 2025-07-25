@@ -110,7 +110,7 @@ class GuestController extends Controller
             $pdfExist= !$hasPdf || !file_exists(storage_path('app/' . str_replace('storage/', 'public/', $news->pdfFile->file_path)));
             $imageExist = !$hasImage || !file_exists(storage_path('app/' . str_replace('storage/', 'public/', $news->image->url)));
             
-            if ($pdfExist || $imageExist) {
+            if ($imageExist) {
                 return response()->json(['error' => 'File not found.'], 404);
             }
             // Borra solo si existen
@@ -209,7 +209,7 @@ class GuestController extends Controller
                 'title' => $news->title,
                 'abstract' => $news->abstract,
                 'imagen' => asset($news->image->url),
-                'pdf' => asset($news->pdfFile->file_path),
+                'pdf' => $pdfUrl,
             ], Response::HTTP_OK);
         } catch (ModelNotFoundException $e) {
             return response()->json([
