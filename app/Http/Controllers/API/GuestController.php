@@ -265,7 +265,7 @@ class GuestController extends Controller
         $newBody = explode("\n", $request->bodyQ);
         $newBody = array_map('trim', $newBody);
         $newBody = array_values(array_filter($newBody));
-        $asList = json_encode($ewBody);
+        $asList = json_encode($newBody);
         if (json_last_error() !== JSON_ERROR_NONE) {
             return response()->json('Error decoding JSON response: ' . json_last_error_msg(), Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -284,7 +284,7 @@ class GuestController extends Controller
             $data = $response->json();
         } else {
             Log::error("Error al hacer la solicitud HTTP: " . $response);
-            throw new Exception("Error al obtener los datos: " . $response->status());
+            throw new \Exception("Error al obtener los datos: " . $response->status());
         }
         return response()->json($data, Response::HTTP_OK);
     }
