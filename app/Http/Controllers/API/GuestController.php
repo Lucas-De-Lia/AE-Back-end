@@ -27,9 +27,9 @@ class GuestController extends Controller
     public function uploadPdfDocument(Request $request){
         // Valido los datos entrantes
         $request->validate([
-            'title' => 'required|string',
+            'title' => 'required|string|max:255',
             'abstract' => 'required|string',
-            'pdf' => 'required|mimes:pdf|max:2048',
+            'pdf' => 'nullable|mimes:pdf|max:2048',
             'image' => 'required|image|max:2048',
         ]);
         DB::beginTransaction();
@@ -40,18 +40,24 @@ class GuestController extends Controller
             ]);
             $imagePath = $this->uploadFileImage( $request->file('image')); //suvolafoto
             $news->image()->create(['url' => str_replace('public/', 'storage/', $imagePath)]); // creo el "objeto" imagen
-            $pdf = $request->file('pdf')->store('public/pdfs'); //guardo el pdf
-            $news->pdfFile()->create([ //creo el objeto pdf
+            // Subida de PDF solo si se envió
+            $pdfPath = null;
+            if ($request->hasFile('pdf')) {
+            $pdf = $request->file('pdf')->store('public/pdfs');
+            $pdfPath = str_replace('public/', 'storage/', $pdf);
+            $news->pdfFile()->create([
                 'title' => $request->title,
-                'file_path' => str_replace('public/', 'storage/', $pdf)
+                'file_path' => $pdfPath
             ]);
+            }
+
             DB::commit();
             return response()->json([
             'id' => $news->id,
             'title' => $news->title,
             'abstract' => $news->abstract,
             'imagen' => str_replace('public/', 'storage/', $imagePath),  // URL accesible desde el navegador
-            'pdf' => str_replace('public/', 'storage/', $pdf),
+            'pdf' => $pdfPath,
         ], 200);
         } catch (\Exception $e) {
             // Roll back the transaction and return an error response
@@ -93,19 +99,27 @@ class GuestController extends Controller
                 // No existe
                 return response()->json(['message' => 'News not found'], Response::HTTP_NOT_FOUND);
             }
+
+            // Verifico existencia de relaciones
+            $hasPdf = $news->pdfFile !== null;
+            $hasImage = $news->image !== null;
             // Los paths
-            $filePathPDF =  $news->pdfFile->file_path;
-            $filePathImage =  $news->image->url;
-            $pdfExist= !$news->pdfFile || !file_exists(storage_path('app/' . str_replace('storage/', 'public/', $news->pdfFile->file_path)));
-            $imageExist = !$news->image || !file_exists(storage_path('app/' . str_replace('storage/', 'public/', $news->image->url)));
+            $filePathPDF = $hasPdf ? $news->pdfFile->file_path : null;
+            $filePathImage = $hasImage ? $news->image->url : null;
+
+            $pdfExist= !$hasPdf || !file_exists(storage_path('app/' . str_replace('storage/', 'public/', $news->pdfFile->file_path)));
+            $imageExist = !$hasImage || !file_exists(storage_path('app/' . str_replace('storage/', 'public/', $news->image->url)));
+            
             if ($pdfExist || $imageExist) {
                 return response()->json(['error' => 'File not found.'], 404);
             }
-            // Borra los archivos
-            unlink($filePathPDF);
+            // Borra solo si existen
+            if ($hasPdf && !$pdfExist) {
+                unlink(storage_path('app/' . str_replace('storage/', 'public/', $filePathPDF)));
+                $news->pdfFile()->delete();
+            }
             unlink($filePathImage);
             // Borra los objetos de los archivos
-            $news->pdfFile()->delete();
             $news->image()->delete();
             $news->delete();     
             return response()->json([ 'message' => 'Remove success'], Response::HTTP_OK);
@@ -169,7 +183,7 @@ class GuestController extends Controller
         $newsList = DB::table("news") // De las noticias
             ->orderBy($sort_by['colum'],$sort_by['order']) // con el orden indicado
             ->join("images", "news.id", "=", "images.news_id") // quiero vincularla con su imagen
-            ->join("pdf_files", "news.id", "=", "pdf_files.news_id") //quieor vincularla con su pdf
+            ->leftJoin("pdf_files", "news.id", "=", "pdf_files.news_id") //quieor vincularla con su pdf
             ->select('news.*', 'images.url', 'pdf_files.file_path')
             ->where($reglas);
         return response()->json($newsList->paginate($page_size), Response::HTTP_OK); //pagino y luego retorno el valor.
@@ -182,10 +196,13 @@ class GuestController extends Controller
         try {
             // Busco la noticia
             $news = News::findOrFail($request->id);
-            $filePath = storage_path('app/public/' . $news->pdfFile->file_path);
-            if (!$news->pdfFile || !file_exists(storage_path('app/' . str_replace('storage/', 'public/', $news->pdfFile->file_path)))) {
-                // Si no existe el archivo
-                return response()->json(['error' => 'File not found.'], 404);
+            $pdfUrl = null;
+            if ($news->pdfFile) {
+            // Verifico que el archivo físico exista
+                $pdfPath = storage_path('app/' . str_replace('storage/', 'public/', $news->pdfFile->file_path));
+                if (file_exists($pdfPath)) {
+                    $pdfUrl = asset($news->pdfFile->file_path);
+                }
             }
             return response()->json([
                 'id' => $news->id,
@@ -222,9 +239,11 @@ class GuestController extends Controller
                 $news = $this->updateFileImagen($request->file('image'), $news);
             }
             if($request->pdf){
-                $filePathPDF =  $news->pdfFile->file_path;
-                unlink($filePathPDF);
-                $news->pdfFile()->delete();
+                if($news->pdfFile){
+                    $filePathPDF =  $news->pdfFile->file_path;
+                    unlink($filePathPDF);
+                    $news->pdfFile()->delete();
+                }
                 $pdf = $request->file('pdf')->store('public/pdfs');
                 $news->pdfFile()->create([
                     'title' => $request->file('pdf')->getClientOriginalName(),
