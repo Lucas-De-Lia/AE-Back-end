@@ -36,13 +36,14 @@ class AeController extends Controller
             $token = env("API_TOKEN_AE");
           
             $user = Auth::user();
-            $DNI = AeController::getDNI($user->cuil);
+            $DNI = $user->dni;
 
             // Make the GET request to the API
             $response = Http::withHeaders([
                 'API-Token' => $token,
                 'X-API-Key' => env('APP_SISTEMON_KEY'),
             ])->get($url . '/fechas/' . (string) $DNI);
+            Log::info("url " .$url . '/fechas/' . (string) $DNI);
             // Check for any HTTP errors
             if ($response->failed()) {
                 return response()->json('Error when making API request: ' . $response->status(), Response::HTTP_BAD_REQUEST);
@@ -94,9 +95,9 @@ class AeController extends Controller
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");
             $user = Auth::user();
-            $DNI = AeController::getDNI($user->cuil);
+            $DNI = $user->dni;
 
-            if (!Hash::check($request->input('password'), $user->password)) {
+            if (!Hash::check($request->input('password'), (string) $user->password)) {
                 return response()->json(['error' => 'Current password is incorrect'], Response::HTTP_BAD_REQUEST);
             }
 
@@ -123,11 +124,6 @@ class AeController extends Controller
             }
         }
     }
-    private static function getDNI($cuil){
-        preg_match('/-(\d+)-/', $cuil, $matches);
-        return (int) ($matches[1]);
-        ;
-    }
     // Función encargada de hacer la request de alta de AE
     public static function start($postData){
         try {
@@ -151,8 +147,9 @@ class AeController extends Controller
         return $resized->toWebp();
     }
     // Gestiona el registro del usuario como un nuevo AE
+    //! REVISAR PORQUE EL TEMA DE LA IMAGEN PUEDE LLEGAR A FALLAR!!!
     public static function register_ae(Request $request){   
-        $nro_dni = AeController::getDNI($request->cuil);
+        $nro_dni = $request->dni;
         $postData = [
             'ae_datos' => [
                 'nro_dni' => $nro_dni,
@@ -177,7 +174,7 @@ class AeController extends Controller
         $response = AeController::start($postData);
         $url = env("API_URL_AE");
         $token = env("API_TOKEN_AE");
-        $image = AeController::merge_dni_photos($request->dni);
+        $image = AeController::merge_dni_photos($request->dniImg);
         
         $response2 = Http::withHeaders([
             'API-Token' => $token,
@@ -233,7 +230,7 @@ class AeController extends Controller
             }
             $postData = [
                 'ae_datos' => [
-                    'nro_dni' => AeController::getDNI($user->cuil),
+                    'nro_dni' => $user->dni,
                     'nombres' => $request->firstname,
                     'apellido' => $request->lastname,
                     'fecha_nacimiento' => $request->birthdate,
@@ -262,7 +259,7 @@ class AeController extends Controller
             $user = Auth::user();
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");
-            $dni = AeController::getDNI($user->cuil);
+            $dni = $user->dni;
             try {
                 $response = Http::withHeaders([
                     'API-Token' => $token,
@@ -282,7 +279,7 @@ class AeController extends Controller
             }
             return response()->json(
                 [
-                    'cuil' => $user->cuil,
+                    'dni' => $user->dni,
                     'lastname' => $data['apellido'], // Acceder al apellido como elemento del array
                     'name' => $data['nombres'], // Acceder al nombre como elemento del array
                     'birthdate' => $data['fecha_nacimiento'], // Supongo que $ae es definido en algún lugar, de lo contrario tendrías que obtener su valor
@@ -308,8 +305,7 @@ class AeController extends Controller
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");
             $user = Auth::user();
-            $dni = AeController::getDNI($user->cuil);
-            
+            $dni = $user->dni;          
             $response = Http::withHeaders([
                 'X-API-Key' => env('APP_SISTEMON_KEY'),
                 'API-Token' => $token,
@@ -327,8 +323,7 @@ class AeController extends Controller
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");
             $user = Auth::user();
-            $dni = AeController::getDNI($user->cuil);
-            
+            $dni = $user->dni;
             $response = Http::withHeaders([
                 'X-API-Key' => env('APP_SISTEMON_KEY'),
                 'API-Token' => $token,
@@ -345,8 +340,7 @@ class AeController extends Controller
             $user = Auth::user();
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");
-            $dni = AeController::getDNI($user->cuil);
-
+            $dni = $user->dni;
             $page_size = 10;
             //Si envie datos concretos de paginado los seteo
             if(!empty($request->page_size)){
@@ -399,9 +393,7 @@ public function loadSurvey(Request $request){
             'problemasAutocontrol' => 'required|boolean',
             'deseaRecibirInfo' => 'required|boolean',
         ]);
-        
-        // Agregar CUIL al payload
-        $validatedData['cuil'] = Auth::user()->cuil;
+        $validatedData['dni'] = Auth::user()->dni;
         // Solicitud HTTP
         $response = Http::withHeaders([
             'X-API-Key' => env('APP_SISTEMON_KEY'),

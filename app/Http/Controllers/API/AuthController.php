@@ -26,10 +26,10 @@ class AuthController extends Controller {
     // Gestiona el inició de seccion
     public function login(Request $request){
         $request->validate([
-            'cuil' => 'required|string',
+            'dni' => 'required|string',
             'password' => 'required|string'
         ]);
-        if (Auth::attempt(['cuil' => $request->cuil, 'password' => $request->password])) {
+        if (Auth::attempt(['dni' => $request->dni, 'password' => $request->password])) {
             $user = $request->user(); // Obtengo el usuario
             $user->tokens()->delete(); // botto el token viejo
             $token = $user->createToken('token-name')->plainTextToken;
@@ -42,7 +42,7 @@ class AuthController extends Controller {
                     'API-Token' => $apiToken,
                     'X-API-Key' => env('APP_SISTEMON_KEY'),
                     ])->get("$url/respondio-encuesta",[
-                        'cuil' => $user->cuil,
+                        'dni' => $user->dni,
                     ]);
                 
                 if($response->successful()){
@@ -51,13 +51,12 @@ class AuthController extends Controller {
             }catch (Exception $e){
                 Log::error('Error al consultar microservicio de encuesta: ' . $e->getMessage());
             }
-
             return response()->json([
                 'user' => [ // devuelvo datos del usuario
                     'name' => $user->name,
                     'email' => $user->email,
                     'email_verified_at' => $user->email_verified_at,
-                    'cuil' => $user->cuil,
+                    'dni' => $user->dni,
                     'ae' => AeController::$AE['NON_AE'],
                     'respondioEncuesta' => $respondioEncuesta,
                 ],
@@ -73,15 +72,15 @@ class AuthController extends Controller {
         ], Response::HTTP_UNAUTHORIZED);
     }
 
-    // Registra un nuevo usuario    
+    // Registra un nuevo usuario   
+    //?YA ME MANDA EL DNI EL FRONT, LO DEBE OBTENER ANTES DE HACER LA SOLICITUD, PERO DEBO QUITAR EL CUIL Y QUE ME MANDE SOLO EL DNI
     public function register(Request $request){
         // Validate the incoming request data
         $request->validate([
-            'cuil' => [
+            'dni' => [
                 'required',
                 'string',
                 'unique:users',
-                'regex:/^\d{2}-\d{8}-\d{1}$/',
             ],
             'firstname' => 'required|string|max:150',
             'lastname' => 'required|string|max:100',
@@ -99,7 +98,6 @@ class AuthController extends Controller {
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
             'renewvaldate' => 'nullable|date',
-            'dni' => 'required|string',
         ]);
         //verificar los datos
         
@@ -113,7 +111,7 @@ class AuthController extends Controller {
         // Create user data
         $data = [
             'name' => implode(', ', [$request->firstname, $request->lastname]),
-            'cuil' => $request->cuil,
+            'dni' => $request->dni,
             'password' => Hash::make($request->password),
             'email' => $request->email,
         ];
@@ -173,7 +171,7 @@ class AuthController extends Controller {
                     'API-Token' => $apiToken,
                     'X-API-Key' => env('APP_SISTEMON_KEY'),
                     ])->get("$url/respondio-encuesta",[
-                        'cuil' => $user->cuil,
+                        'dni' => $user->dni,
                     ]);
                 
                 if($response->successful()){
@@ -187,7 +185,7 @@ class AuthController extends Controller {
                     'name' => $user->name,
                     'email' => $user->email,
                     'email_verified_at' => $user->email_verified_at,
-                    'cuil' => $user->cuil,
+                    'dni' => $user->dni,
                     'ae' => AeController::$AE['NON_AE'],
                     'respondioEncuesta' => $respondioEncuesta,
                 ],
@@ -272,6 +270,3 @@ class AuthController extends Controller {
         return ( $field->check == 1 ||  $field== -1);
     }
 }
-
-//TODO Borras todos los metodos de RENAPER crear un metodo para usar OCR  y verificar DNI
-//? Analizar con javi que conviene si tratar de obtener ciertos campos o validar solo que la imagen no sea borrosa 

@@ -13,7 +13,7 @@ use Illuminate\Contracts\Auth\CanResetPassword;
 class User extends Authenticatable implements MustVerifyEmail, CanResetPassword
 {
     use HasApiTokens, HasFactory, Notifiable;
-    protected $username = 'cuil';
+    protected $username = 'dni';
 
 
 
@@ -25,7 +25,7 @@ class User extends Authenticatable implements MustVerifyEmail, CanResetPassword
 
     protected $fillable = [
         'name',
-        'cuil',
+        'dni',
         'email',
         'password',
         'respondio_encuesta',

@@ -24,9 +24,9 @@ class PasswordsController extends Controller
     }
     // Intenta recuperar la contraseña enviando un mail de verificación en caso de tener el mail verificado
     public function forgot_password(Request $request){
-        $request->validate(['cuil' => 'exists:users,cuil']);
-        // Busca el usuario con el cuil
-        $user = User::whereCuil($request->cuil)->first();
+        $request->validate(['dni' => 'exists:users,dni']);
+        // Busca el usuario con el dni
+        $user = User::whereDni($request->dni)->first();
         if (!$user->hasVerifiedEmail()) {
             // Si no tiene el correo verificado devuelvo error ya que no se si el mail de recuperación llegara
             return response()->json(['email' => __('Error')], Response::HTTP_BAD_REQUEST);
@@ -46,12 +46,12 @@ class PasswordsController extends Controller
     public function reset_password(Request $request){
         $request->validate([
             'token' => 'required',
-            'cuil' => 'required',
+            'dni' => 'required',
             'password' => 'required|min:8|confirmed',
         ]);
         // resetea la clave 
         $status = Password::reset(
-            $request->only('cuil', 'password', 'password_confirmation', 'token'),
+            $request->only('dni', 'password', 'password_confirmation', 'token'),
             function (User $user, string $password) {
                 $user->forceFill([
                     'password' => Hash::make($password) // hashea la nueva pass 
