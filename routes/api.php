@@ -49,6 +49,7 @@ Route::prefix('ae')->group(function () {
     Route::post('finalize', [AeController::class, 'finalize_ae']);
     Route::post('history', [AeController::class, 'fetch_history']);
     Route::post('survey',[AeController::class,'loadSurvey']);
+    Route::get('verify-trust/{token}',[AeController::class,'verifyTrust']);
 });
 
 Route::prefix('resources')->group(function () {

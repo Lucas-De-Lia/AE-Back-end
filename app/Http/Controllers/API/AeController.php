@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -10,10 +11,16 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
 use Exception;
+use UnexpectedValueException;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+use Firebase\JWT\ExpiredException;
 use Illuminate\Validation\ValidationException;
 use Intervention\Image\ImageManager;
 use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Facades\DB;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use App\Models\User;
 
 class AeController extends Controller
 {
@@ -25,8 +32,10 @@ class AeController extends Controller
     ];
     public function __construct()
     {
-        $this->middleware(['throttle:api', 'auth:sanctum', 'api']);
-        $this->middleware(['auth:sanctum'], ['except' => ['register_ae']]);
+        $this->middleware(['throttle:api', 'api']);
+
+        // auth:sanctum se aplica a todos excepto estos
+        $this->middleware('auth:sanctum')->except(['register_ae', 'verifyTrust']);
     }
     // Obtiene las fechas de AE para el usuario 
     public function get_calendar_dates(){
@@ -328,11 +337,39 @@ class AeController extends Controller
                 'X-API-Key' => env('APP_SISTEMON_KEY'),
                 'API-Token' => $token,
                 'Content-Type' => 'application/json',
-            ])->get($url . '/constancia/alta/' . $dni);
-            $content = $response->json()["content"];
-            return response()->json(["content" => $content]);
+            ])->get($url . '/datos/' . $dni);
+            $data = $response->json();
+            $payload = ['sub' => $dni, 'iat' => time(), 'exp' => time() + 3600];
+            $jwt = JWT::encode($payload, env('JWT_SECRET'), 'HS256');
+            $urlFront = env("FRONT_END_URL");
+            $urlVerificacion = $urlFront.'ae/verificacion/'.$jwt;
+            $qrCode = QrCode::format('png')->size(150)->generate($urlVerificacion);
+            $qrBase64 = 'data:image/png;base64,' . base64_encode($qrCode);
+            $pdf = Pdf::loadView('pdf.autoexclusion',[
+                'nombres' => $data["nombres"],
+                'fechaHoy' => $data["fecha_ae"],
+                'apellido' => $data["apellido"],
+                'dni' => $dni,
+                'domicilio' => $data["domicilio"],
+                'nroDomicilio' => $data["nro_domicilio"],
+                'piso' =>$data["piso"],
+                'dpto' =>$data["dpto"],
+                'localidad' => $data["nombre_localidad"],
+                'provincia' => $data["nombre_provincia"],
+                'cp' => $data["codigo_postal"],
+                'telefono' => $data["telefono"],
+                'fechaVencimiento' => $data ["fecha_vencimiento"],
+                'fechaCierre' => $data["fecha_cierre_ae"],
+                'fechaRenovacion' => $data["fecha_renovacion"],
+                'esPrimerAe' => $data["esPrimerAe"],
+                'qrBase64' => $qrBase64,
+                'qrUrl' => $urlVerificacion,
+            ]);
+             
+            return response($pdf->output(),200)
+                ->header('Content-Type', 'application/pdf')
+                ->header('Content-Disposition', 'inline; filename="constancia_exclusion.pdf"');
         }
-
     }
     //
     public function fetch_history(Request $request){
@@ -433,6 +470,43 @@ public function loadSurvey(Request $request){
         return response()->json([
             'message' => 'Ocurrió un error inesperado',
             'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+public function verifyTrust ($token){
+    try{
+        $decoded = JWT::decode($token, new Key(env('JWT_SECRET'), 'HS256'));
+        $dni = $decoded->sub;
+        $user = User::where('dni', $dni)->first();
+        if (!$user) {
+            return response()->json([
+                'isValid' => false,
+                'message' => 'Usuario no encontrado',
+            ], 404);
+        }
+       return response()->json([
+            'isValid' => true,
+            'user' => [
+                'nombre' => $user->name,
+                'dni' => $user->dni,
+            ]
+        ], 200);
+
+    } catch (ExpiredException $e) {
+        return response()->json([
+            'isValid' => false,
+            'message' => 'El enlace ha expirado',
+        ], 403);
+    } catch (UnexpectedValueException $e) {
+        return response()->json([
+            'isValid' => false,
+            'message' => 'Token inválido',
+        ], 403);
+    } catch (Exception $e) {
+        return response()->json([
+            'isValid' => false,
+            'message' => 'Error interno',
         ], 500);
     }
 }
