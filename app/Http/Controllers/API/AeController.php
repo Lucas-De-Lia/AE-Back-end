@@ -156,7 +156,6 @@ class AeController extends Controller
         return $resized->toWebp();
     }
     // Gestiona el registro del usuario como un nuevo AE
-    //! REVISAR PORQUE EL TEMA DE LA IMAGEN PUEDE LLEGAR A FALLAR!!!
     public static function register_ae(Request $request){   
         $nro_dni = $request->dni;
         $postData = [
@@ -329,6 +328,8 @@ class AeController extends Controller
     // Obtiene de la API el certificado en pdf de inicio de AE
     public function fetch_start_pdf(Request $request){
         if (Auth::check()) {
+            //! SI SE CAMBIAN LOS FORMULARIOS ACTUALES O SE AGREGAN MAS HAY QUE CAMBIAR EL TIPO
+            $FORM_TYPE = 'SOLICITUD_AE';    
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");
             $user = Auth::user();
@@ -339,7 +340,7 @@ class AeController extends Controller
                 'Content-Type' => 'application/json',
             ])->get($url . '/datos/' . $dni);
             $data = $response->json();
-            $payload = ['sub' => $dni, 'iat' => time(), 'exp' => time() + 3600];
+            $payload = ['sub' => $dni, 'iat' => time(),'form_type' => $FORM_TYPE];
             $jwt = JWT::encode($payload, env('JWT_SECRET'), 'HS256');
             $urlFront = env("FRONT_END_URL");
             $urlVerificacion = $urlFront.'ae/verificacion/'.$jwt;
@@ -476,8 +477,16 @@ public function loadSurvey(Request $request){
 
 public function verifyTrust ($token){
     try{
+        $FORM_TYPE = 'SOLICITUD_AE';  
         $decoded = JWT::decode($token, new Key(env('JWT_SECRET'), 'HS256'));
         $dni = $decoded->sub;
+        $formType = $decoded->form_type ?? null;
+        if(is_null($formType) || $formType !== $FORM_TYPE) {
+            return response()->json([
+                'isValid' => false,
+                'message' => 'Tipo de formulario no encontrado',
+            ], 400);
+        }
         $user = User::where('dni', $dni)->first();
         if (!$user) {
             return response()->json([

@@ -73,7 +73,6 @@ class AuthController extends Controller {
     }
 
     // Registra un nuevo usuario   
-    //?YA ME MANDA EL DNI EL FRONT, LO DEBE OBTENER ANTES DE HACER LA SOLICITUD, PERO DEBO QUITAR EL CUIL Y QUE ME MANDE SOLO EL DNI
     public function register(Request $request){
         // Validate the incoming request data
         $request->validate([
