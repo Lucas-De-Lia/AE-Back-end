@@ -309,67 +309,96 @@ class AeController extends Controller
     }
     // Obtiene de la API el  certificado en pdf de fin de AE.
     public function fetch_end_pdf(Request $request){
-        if (Auth::check()) {
+        if (!Auth::check()){
+            Log::error("Usuario no autorizado para acceder al PDF de inicio de AE");
+            return response()->json(['error' => 'No autorizado'], 401);
+        }
+        try{
+            //tipo formulario
+            $FORM_TYPE = 'BAJA_AE';    
+            //urls y tokens para hacer solicitudes http y generar qr
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");
-            $user = Auth::user();
-            $dni = $user->dni;          
-            $response = Http::withHeaders([
-                'X-API-Key' => env('APP_SISTEMON_KEY'),
-                'API-Token' => $token,
-                'Content-Type' => 'application/json',
-            ])->get($url . '/constancia/reingreso/' . $dni);
-            
-            $content = $response->json()["content"];
-            return response()->json(["content" => $content]);
-        }
+            $urlFront = env("FRONT_END_URL");
 
+            $user = Auth::user();
+            $dni = $user->dni;
+            //genero JWT
+            $payload = ['sub' => $dni, 'iat' => time(),'form_type' => $FORM_TYPE];
+            $jwt = JWT::encode($payload, env('JWT_SECRET'), 'HS256');
+            //genero el qr code
+            $urlVerificacion = $urlFront.'ae/verificacion/'.$jwt;
+            $qrCode = QrCode::format('png')->size(150)->generate($urlVerificacion);
+
+            //obtengo el pdf en base 64 del sistemon
+            $response = Http::withHeaders([
+                'API-Token' => $token,
+                'X-API-Key' => env('APP_SISTEMON_KEY'),
+            ])
+            ->attach('qr', $qrCode, 'qr.png')
+            ->post($url . '/constancia/baja', [
+                'dni' => $dni,
+                'url' => $urlVerificacion,
+            ]);
+                
+            if($response->failed()){
+                Log::error("Error al obtener el PDF de inicio de AE: " . $response->body());
+                return response()->json(['error' => 'Ha ocurrido un error al obtener el PDF.'], 500);
+            }
+            
+            return response($response->body(), 200)
+                ->header('Content-Type', 'application/pdf')
+                ->header('Content-Disposition', 'inline; filename="autoexclusion.pdf"');
+        }catch(Exception $e){
+            Log::error("Ha ocurrido un error al general la constancia: " . $e->getMessage());
+            return response()->json(['error' => 'Ha ocurrido un error al general la constancia.'], 500);
+        }
     }
     // Obtiene de la API el certificado en pdf de inicio de AE
     public function fetch_start_pdf(Request $request){
-        if (Auth::check()) {
-            //! SI SE CAMBIAN LOS FORMULARIOS ACTUALES O SE AGREGAN MAS HAY QUE CAMBIAR EL TIPO
-            $FORM_TYPE = 'SOLICITUD_AE';    
+        if (!Auth::check()){
+            Log::error("Usuario no autorizado para acceder al PDF de inicio de AE");
+            return response()->json(['error' => 'No autorizado'], 401);
+        }
+        try{
+            //tipo formulario
+            $FORM_TYPE = 'ALTA_AE';    
+            //urls y tokens para hacer solicitudes http y generar qr
             $url = env("API_URL_AE");
             $token = env("API_TOKEN_AE");
+            $urlFront = env("FRONT_END_URL");
+
             $user = Auth::user();
             $dni = $user->dni;
-            $response = Http::withHeaders([
-                'X-API-Key' => env('APP_SISTEMON_KEY'),
-                'API-Token' => $token,
-                'Content-Type' => 'application/json',
-            ])->get($url . '/datos/' . $dni);
-            $data = $response->json();
+            //genero JWT
             $payload = ['sub' => $dni, 'iat' => time(),'form_type' => $FORM_TYPE];
             $jwt = JWT::encode($payload, env('JWT_SECRET'), 'HS256');
-            $urlFront = env("FRONT_END_URL");
+            //genero el qr code
             $urlVerificacion = $urlFront.'ae/verificacion/'.$jwt;
             $qrCode = QrCode::format('png')->size(150)->generate($urlVerificacion);
-            $qrBase64 = 'data:image/png;base64,' . base64_encode($qrCode);
-            $pdf = Pdf::loadView('pdf.autoexclusion',[
-                'nombres' => $data["nombres"],
-                'fechaHoy' => $data["fecha_ae"],
-                'apellido' => $data["apellido"],
+
+            //obtengo el pdf en base 64 del sistemon
+            $response = Http::withHeaders([
+                'API-Token' => $token,
+                'X-API-Key' => env('APP_SISTEMON_KEY'),
+            ])
+            ->attach('qr', $qrCode, 'qr.png')
+            ->post($url . '/constancia/alta', [
                 'dni' => $dni,
-                'domicilio' => $data["domicilio"],
-                'nroDomicilio' => $data["nro_domicilio"],
-                'piso' =>$data["piso"],
-                'dpto' =>$data["dpto"],
-                'localidad' => $data["nombre_localidad"],
-                'provincia' => $data["nombre_provincia"],
-                'cp' => $data["codigo_postal"],
-                'telefono' => $data["telefono"],
-                'fechaVencimiento' => $data ["fecha_vencimiento"],
-                'fechaCierre' => $data["fecha_cierre_ae"],
-                'fechaRenovacion' => $data["fecha_renovacion"],
-                'esPrimerAe' => $data["esPrimerAe"],
-                'qrBase64' => $qrBase64,
-                'qrUrl' => $urlVerificacion,
+                'url' => $urlVerificacion,
             ]);
-             
-            return response($pdf->output(),200)
+                
+            if($response->failed()){
+                Log::error("Error al obtener el PDF de inicio de AE: " . $response->body());
+                return response()->json(['error' => 'Ha ocurrido un error al obtener el PDF.'], 500);
+            }
+            
+            return response($response->body(), 200)
                 ->header('Content-Type', 'application/pdf')
-                ->header('Content-Disposition', 'inline; filename="constancia_exclusion.pdf"');
+                ->header('Content-Disposition', 'inline; filename="autoexclusion.pdf"');
+        }catch(Exception $e){
+            Log::error("Ha ocurrido un error al general la constancia: " . $e->getMessage());
+            return response()->json(['error' => 'Ha ocurrido un error al general la constancia.'], 500);
         }
     }
     //
@@ -477,11 +506,11 @@ public function loadSurvey(Request $request){
 
 public function verifyTrust ($token){
     try{
-        $FORM_TYPE = 'SOLICITUD_AE';  
+        $FORM_TYPE = ['ALTA_AE','BAJA_AE'];  
         $decoded = JWT::decode($token, new Key(env('JWT_SECRET'), 'HS256'));
         $dni = $decoded->sub;
         $formType = $decoded->form_type ?? null;
-        if(is_null($formType) || $formType !== $FORM_TYPE) {
+        if(is_null($formType) || !in_array($formType, $FORM_TYPE)) {
             return response()->json([
                 'isValid' => false,
                 'message' => 'Tipo de formulario no encontrado',
