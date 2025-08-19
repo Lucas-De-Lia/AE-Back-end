@@ -12,13 +12,16 @@ class News extends Model
     use HasFactory;
     protected $table= "news";
 
-    protected $fillable = [
-        'title',
-        'abstract'
+     protected $fillable = [
+        'titulo_principal',
+        'titulo_secundario',
+        'texto_principal',
+        'texto_secundario',
+        'tiempo_lectura',
     ];
 
-    public function image(){
-        return $this->hasOne(Image::class);
+    public function images(){
+        return $this->hasMany(Image::class);
     }
 
     public function pdfFile(){

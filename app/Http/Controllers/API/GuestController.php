@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\News;
 use App\Models\Question;
 use App\Models\User;
+use Exception;
 use Illuminate\Http\Response;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
@@ -24,56 +25,77 @@ class GuestController extends Controller
         $this->middleware('throttle:api');
     }
     // Sube una noticia nueva
-    public function uploadPdfDocument(Request $request){
+    public function crearNoticia(Request $request){
         // Valido los datos entrantes
         $request->validate([
-            'title' => 'required|string|max:255',
-            'abstract' => 'required|string',
+            'titulo_principal' => 'required|string|max:255',
+            'titulo_secundario' => 'nullable|string|max:255',
+            'texto_principal' => 'required|string',
+            'texto_secundario' => 'nullable|string',
+            'tiempo_lectura' => 'nullable|integer',
             'pdf' => 'nullable|mimes:pdf|max:2048',
-            'image' => 'required|image|max:2048',
+            'images'   => 'required|array',
+            'images.*' => 'image|max:2048',
         ]);
         DB::beginTransaction();
         try {
             $news = News::create([
-                'title' => $request->title,
-                'abstract' => $request->abstract,
+                'titulo_principal' => $request->titulo_principal,
+                'titulo_secundario' => $request->titulo_secundario,
+                'texto_principal' => $request->texto_principal,
+                'texto_secundario' => $request->texto_secundario,
+                'tiempo_lectura' => $request->tiempo_lectura,
             ]);
-            $imagePath = $this->uploadFileImage( $request->file('image')); //suvolafoto
-            $news->image()->create(['url' => str_replace('public/', 'storage/', $imagePath)]); // creo el "objeto" imagen
+            $imagePaths = $this->uploadImages( $request->file('images'));
+            foreach ($imagePaths as $imagePath) {
+                $news->images()->create(['url' => str_replace('public/', 'storage/', $imagePath)]);
+            }
             // Subida de PDF solo si se envió
             $pdfPath = null;
+            Log::info($request->hasFile('pdf'));
             if ($request->hasFile('pdf')) {
+            Log::info("tiene pdf");
             $pdf = $request->file('pdf')->store('public/pdfs');
             $pdfPath = str_replace('public/', 'storage/', $pdf);
             $news->pdfFile()->create([
-                'title' => $request->title,
+                'title' => $request->titulo_principal,
                 'file_path' => $pdfPath
             ]);
             }
 
             DB::commit();
             return response()->json([
-            'id' => $news->id,
-            'title' => $news->title,
-            'abstract' => $news->abstract,
-            'imagen' => str_replace('public/', 'storage/', $imagePath),  // URL accesible desde el navegador
-            'pdf' => $pdfPath,
+             'id' => $news->id,
+            'titulo_principal' => $news->titulo_principal,
+            'titulo_secundario' => $news->titulo_secundario,
+            'texto_principal' => $news->texto_principal,
+            'texto_secundario' => $news->texto_secundario,
+            'tiempo_lectura' => $news->tiempo_lectura,
+            'imagenes' => $news->images->map(fn($img) => $img->url),
+            'pdf' => $news->pdfFile?->file_path,
         ], 200);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Roll back the transaction and return an error response
+            Log::error('Error creating news: ' . $e->getMessage());
             DB::rollback();
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
     // Sube la imagen 
-    private function uploadFileImage($image){
+    private function uploadImages($images){
         if (!Storage::exists('public/images')) {
             Storage::makeDirectory('public/images'); // verifica la exitencia de la carpeta
         }
-        $imagePath = 'public/images/' .uniqid() . '_' . time() . '.' .  $image->getClientOriginalName(); // Genera un nombre unico
-        $imageM =Image::read($image); // carga la imagen
-        $imageM->resize(1920, 1080)->toWebp(100)->save(storage_path('app/' . $imagePath)); // modifica la imagen 
-        return $imagePath;
+        $paths = [];
+        foreach ($images as $image) {
+        $imagePath = 'public/images/' . uniqid() . '_' . time() . '.' . $image->getClientOriginalExtension();
+
+        $imageM = Image::read($image);
+        $imageM->resize(1920, 1080)->toWebp(100)->save(storage_path('app/' . $imagePath));
+
+        $paths[] = $imagePath;
+        }
+        return $paths;
     }
     // sube laimagen
     private function updateFileImagen($image, $news){
@@ -156,8 +178,7 @@ class GuestController extends Controller
         }
         $reglas = Array();
         $filters = [
-            'title' => 'news.title',
-            'abstract' => 'news.abstract',
+            'title' => 'news.titulo_principal',
             'start_date' => 'news.created_at',
             'end_date' => 'news.created_at',
           ];
@@ -165,8 +186,7 @@ class GuestController extends Controller
         foreach($filters as $key => $column){
             if (!empty($request->$key)) {
                 switch($key){
-                    case 'title':
-                    case 'abstract':
+                    case 'title': 
                         $searchTerm = strtolower($request->$key);
                         $reglas[] = [DB::raw("LOWER($column)"), 'LIKE', "%$searchTerm%"];
                         break;
@@ -180,13 +200,24 @@ class GuestController extends Controller
             }
         }
         // Realizo la busqueda
-        $newsList = DB::table("news") // De las noticias
-            ->orderBy($sort_by['colum'],$sort_by['order']) // con el orden indicado
-            ->join("images", "news.id", "=", "images.news_id") // quiero vincularla con su imagen
-            ->leftJoin("pdf_files", "news.id", "=", "pdf_files.news_id") //quieor vincularla con su pdf
-            ->select('news.*', 'images.url', 'pdf_files.file_path')
-            ->where($reglas);
-        return response()->json($newsList->paginate($page_size), Response::HTTP_OK); //pagino y luego retorno el valor.
+        try{
+            $newsList = DB::table("news")
+                ->orderBy($sort_by['colum'], $sort_by['order'])
+                ->join("images", "news.id", "=", "images.news_id")
+                ->leftJoin("pdf_files", "news.id", "=", "pdf_files.news_id")
+                ->select(
+            'news.*',
+                    DB::raw("string_agg(images.url, ',') as images"),
+                    'pdf_files.file_path'
+                )
+                ->where($reglas)
+                ->groupBy('news.id', 'pdf_files.file_path')
+                ->paginate($page_size);
+            return response()->json($newsList, Response::HTTP_OK);
+        }catch(Exception $e){
+            Log::error("Error fetching news list: " . $e->getMessage());
+            return response()->json(['message' => 'Error fetching news list'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     public function getNewsPdf(Request $request){
