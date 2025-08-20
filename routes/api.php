@@ -55,8 +55,8 @@ Route::prefix('ae')->group(function () {
 Route::prefix('resources')->group(function () {
     Route::post('crearNoticia', [GuestController::class, 'crearNoticia']);
     Route::post('get-news-list', [GuestController::class, 'getNewsList']);
-    Route::post('get-news-pdf', [GuestController::class, 'getNewsPdf']);
-    Route::post('remove-news', [GuestController::class, 'removePdfDocument']);
+    Route::post('get-news-info', [GuestController::class, 'getNewsInfo']);
+    Route::post('remove-news', [GuestController::class, 'borrarNoticia']);
     Route::get('getQuestions', [GuestController::class, 'getQuestionList']);
     Route::post('post-new-question',[GuestController::class, 'uploadQuestions']);
     Route::post('update-news',[GuestController::class, 'editNews']);

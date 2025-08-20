@@ -110,7 +110,7 @@ class GuestController extends Controller
         return $news;
     }
     // remove una noticia
-    public function removePdfDocument(Request $request){
+    public function borrarNoticia(Request $request){
         $request->validate([
             'id' => 'required',
         ]);
@@ -124,25 +124,28 @@ class GuestController extends Controller
 
             // Verifico existencia de relaciones
             $hasPdf = $news->pdfFile !== null;
-            $hasImage = $news->image !== null;
-            // Los paths
-            $filePathPDF = $hasPdf ? $news->pdfFile->file_path : null;
-            $filePathImage = $hasImage ? $news->image->url : null;
+            $hasImages = $news->images->isNotEmpty();
 
-            $pdfExist= !$hasPdf || !file_exists(storage_path('app/' . str_replace('storage/', 'public/', $news->pdfFile->file_path)));
-            $imageExist = !$hasImage || !file_exists(storage_path('app/' . str_replace('storage/', 'public/', $news->image->url)));
-            
-            if ($imageExist) {
-                return response()->json(['error' => 'File not found.'], 404);
-            }
-            // Borra solo si existen
-            if ($hasPdf && !$pdfExist) {
-                unlink(storage_path('app/' . str_replace('storage/', 'public/', $filePathPDF)));
+            // Borro PDF si existe en disco
+            if ($hasPdf) {
+                $pdfPath = storage_path('app/' . str_replace('storage/', 'public/', $news->pdfFile->file_path));
+                if (file_exists($pdfPath)) {
+                unlink($pdfPath);
+                }
                 $news->pdfFile()->delete();
             }
-            unlink($filePathImage);
-            // Borra los objetos de los archivos
-            $news->image()->delete();
+
+            // Borro imágenes si existen
+            if ($hasImages) {
+                foreach ($news->images as $img) {
+                    $imgPath = storage_path('app/' . str_replace('storage/', 'public/', $img->url));
+                    if (file_exists($imgPath)) {
+                        unlink($imgPath);
+                    }
+                    $img->delete();
+                }
+            }
+            
             $news->delete();     
             return response()->json([ 'message' => 'Remove success'], Response::HTTP_OK);
         } catch (ModelNotFoundException $e) {
@@ -220,7 +223,7 @@ class GuestController extends Controller
         }
     }
 
-    public function getNewsPdf(Request $request){
+    public function getNewsInfo(Request $request){
         $request->validate([
             'id' => 'required',
         ]);
@@ -237,9 +240,12 @@ class GuestController extends Controller
             }
             return response()->json([
                 'id' => $news->id,
-                'title' => $news->title,
-                'abstract' => $news->abstract,
-                'imagen' => asset($news->image->url),
+                'titulo_principal' => $news->titulo_principal,
+                'texto_principal' => $news->texto_principal,
+                'titulo_secundario' => $news->titulo_secundario,
+                'texto_secundario' => $news->texto_secundario,
+                'tiempo_lectura' => $news->tiempo_lectura,
+                'imagenes' => $news->images->map(fn($img) => $img->url),
                 'pdf' => $pdfUrl,
             ], Response::HTTP_OK);
         } catch (ModelNotFoundException $e) {
