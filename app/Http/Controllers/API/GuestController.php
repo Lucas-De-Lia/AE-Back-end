@@ -52,9 +52,7 @@ class GuestController extends Controller
             }
             // Subida de PDF solo si se envió
             $pdfPath = null;
-            Log::info($request->hasFile('pdf'));
             if ($request->hasFile('pdf')) {
-            Log::info("tiene pdf");
             $pdf = $request->file('pdf')->store('public/pdfs');
             $pdfPath = str_replace('public/', 'storage/', $pdf);
             $news->pdfFile()->create([
@@ -258,6 +256,14 @@ class GuestController extends Controller
     public function editNews(Request $request){
         $request->validate([
             'id' => 'required',
+            'titulo_principal' => 'nullable|string|max:255',
+            'titulo_secundario' => 'nullable|string|max:255',
+            'texto_principal' => 'nullable|string',
+            'texto_secundario' => 'nullable|string',
+            'tiempo_lectura' => 'nullable|integer',
+            'pdf' => 'nullable|mimes:pdf|max:2048',
+            'images'   => 'nullable|array',
+            'images.*' => 'image|max:2048',
         ]);
         try {
             // Obtiene la noticia
@@ -266,14 +272,41 @@ class GuestController extends Controller
                 response()->json(['message' => 'News not found'], Response::HTTP_NOT_FOUND);
             }
             //Actualizo los campos si son enviados en la request
-            if($request->title){
-                $news->title = $request->title;
+            if($request->titulo_principal){
+                $news->titulo_principal = $request->titulo_principal;
             }
-            if($request->abstract){
-                $news->abstract = $request->abstract;
+
+            if($request->texto_principal){
+                $news->texto_principal = $request->texto_principal;
             }
-            if($request->image){
-                $news = $this->updateFileImagen($request->file('image'), $news);
+
+            if($request->titulo_secundario){
+                $news->titulo_secundario = $request->titulo_secundario;
+            }
+
+            if($request->texto_secundario){
+                $news->texto_secundario = $request->texto_secundario;
+            }
+
+            if($request->tiempo_lectura){
+                $news->tiempo_lectura = $request->tiempo_lectura;
+            }
+
+            if($request->images){
+                $hasImages = $news->images->isNotEmpty();
+                if($hasImages){
+                    foreach ($news->images as $img) {
+                    $imgPath = storage_path('app/' . str_replace('storage/', 'public/', $img->url));
+                    if (file_exists($imgPath)) {
+                        unlink($imgPath);
+                    }
+                    $img->delete();
+                    }
+                }
+                $imagePaths = $this->uploadImages( $request->file('images'));
+                foreach ($imagePaths as $imagePath) {
+                    $news->images()->create(['url' => str_replace('public/', 'storage/', $imagePath)]);
+                }
             }
             if($request->pdf){
                 if($news->pdfFile){
